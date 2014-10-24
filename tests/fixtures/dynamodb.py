@@ -8,7 +8,7 @@ from schema.dynamodb import TableDynamo
 connection = DynamoDBConnection(
     host='localhost',
     port='8000',
-    aws_secret_access_key='foo'
+    aws_secret_access_key='foo',
     aws_access_key_id='bar',
     is_secure=False)
 
