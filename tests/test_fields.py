@@ -29,12 +29,20 @@ def test_field_validators(monkeypatch):
 
 
 def test_validation():
-    f = fields.Field(basetype=str)
+    f = fields.Field()
     wrong_values = (list(), set(), dict())
     assert f.validate('Hello') == 'Hello'
     for wrong_value in wrong_values:
         with pytest.raises(exceptions.FieldException):
             f.validate(wrong_value)
+
+
+def test_validation_on_required_field():
+    f = fields.Field(required=True)
+    values = (None, '')
+    for value in values:
+        with pytest.raises(exceptions.FieldException):
+            f.validate(value)
 
 
 def test_validation_with_validators():

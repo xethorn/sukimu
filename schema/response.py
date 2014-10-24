@@ -1,3 +1,6 @@
+from schema import exceptions
+
+
 class Status():
     ERROR = 500
     INVALID_FIELDS = 501
@@ -54,27 +57,27 @@ class Response():
 
         if isinstance(self.message, dict):
             return self.message.get(key, default_value)
-        raise exceptions.RESPONSE_FORMAT_GETATTR_NOT_AVAILABLE
+        raise exceptions.RESPONSE_FORMAT_ATTRIBUTES_UNAVAILABLE
 
     @property
     def success(self):
         return self.status == Status.OK
 
-    @staticmethod
-    def create_error_response(errors=None, message=None):
-        """Create an error response.
-        """
 
-        return ModelResponse(
-            status=Status.ERROR,
-            errors=errors,
-            message=message)
+def create_error_response(errors=None, message=None):
+    """Create an error response.
+    """
 
-    @staticmethod
-    def create_success_response(message=None):
-        """Create a success response.
-        """
+    return Response(
+        status=Status.ERROR,
+        errors=errors,
+        message=message)
 
-        return ModelResponse(
-            status=Status.OK,
-            message=message)
+
+def create_success_response(message=None):
+    """Create a success response.
+    """
+
+    return Response(
+        status=Status.OK,
+        message=message)
