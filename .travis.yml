@@ -8,4 +8,6 @@ before_install:
     - java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar &
 
 install: "pip install -r requirements.txt"
-script: "py.test tests/"
+script: "py.test tests/ --cov schema --cov-report term-missing"
+after_success:
+    - coveralls
