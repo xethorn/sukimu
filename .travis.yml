@@ -5,7 +5,7 @@ python:
 before_install:
     - wget http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip
     - unzip dynamodb_local_latest.zip
-    - java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar
+    - java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar &
 
 install: "pip install -r requirements.txt"
 script: "py.test tests/"
