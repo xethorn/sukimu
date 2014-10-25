@@ -45,6 +45,12 @@ def test_validation_on_required_field():
             f.validate(value)
 
 
+def test_validation_on_wrong_field_type():
+    f = fields.Field(basetype=int)
+    with pytest.raises(exceptions.FieldException):
+        f.validate('value')
+
+
 def test_validation_with_validators():
     def validator(value):
         return value.replace('hello', 'hi')

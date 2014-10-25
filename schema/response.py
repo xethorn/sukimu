@@ -36,8 +36,9 @@ class Response():
         self.status = status
         self.errors = errors or {}
         self.message = message or {}
+        self.formatted_message = None
 
-    def __getattr__(self, key, default_value=None):
+    def __getattr__(self, key):
         """Shortcut to access properties on the response message.
 
         If the response message (and only if the response message is a
@@ -48,15 +49,23 @@ class Response():
 
         Args:
             key (string): The key to get.
-            default_value: The default value.
 
         Return:
             The value for this specific key (and if it does not exist the
             default value.)
         """
 
-        if isinstance(self.message, dict):
-            return self.message.get(key, default_value)
+        if not self.formatted_message and isinstance(self.message, dict):
+            self.formatted_message = self.message
+        elif not self.formatted_message:
+            try:
+                self.formatted_message = dict(self.message)
+            except:
+                pass
+
+        if self.formatted_message:
+            return self.formatted_message.get(key)
+
         raise exceptions.RESPONSE_FORMAT_ATTRIBUTES_UNAVAILABLE
 
     @property

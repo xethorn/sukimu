@@ -108,26 +108,3 @@ def test_ensure_index(monkeypatch, full_schema):
     assert not resp.success
     assert 'id' in resp.errors
     assert 'username' in resp.errors
-
-
-def test_fetch_query(full_schema):
-    full_schema.update(None, None)
-
-
-def test_fetch_empty_query(monkeypatch, full_schema):
-    monkeypatch.setattr(full_schema.table, 'delete', mock.MagicMock())
-    full_schema.delete(None)
-
-    assert full_schema.table.delete.called
-
-
-def test_fetch_one():
-    pass
-
-
-def test_update():
-    pass
-
-
-def test_delete():
-    pass

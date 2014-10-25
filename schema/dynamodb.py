@@ -3,8 +3,9 @@
 
 from boto.dynamodb2 import table
 
-from schema import schema
+from schema import operations
 from schema import response
+from schema import schema
 
 
 class TableDynamo(schema.Table):
@@ -20,21 +21,21 @@ class TableDynamo(schema.Table):
         self.name = name
         self.table = table.Table(name, connection=connection)
         self.indexes = {}
+        self.hash = None
+        self.range = None
 
-    def is_entry_equal(self, entry1, entry2):
-        """Method to check if two entries are equal.
-
-        Used when an `update` is performed: it helps checking that the found
-        ancestor is not the current entry.
+    def add_index(self, index):
+        """Add an index into the tbale.
 
         Args:
-            entry1 (dict): current object.
-            entry2 (dict): object used for comparison.
-        Return:
-            Boolean: If the current entry is equal to the other entry.
+            index (DynamoIndex): The dynamo index.
         """
 
-        return entry1.get(self.hash) == entry2.get(self.hash)
+        super().add_index(index)
+
+        if index.type == schema.Index.PRIMARY:
+            self.hash = index.hash
+            self.range = index.range
 
     def create(self, data):
         """Create an item.
@@ -48,6 +49,42 @@ class TableDynamo(schema.Table):
 
         self.table.put_item(data=data)
         return data
+
+    def update(self, item, data):
+        """Update an item.
+
+        Args:
+            item (DynamoDbItem): The dynamodb item to update.
+            data (object): The validated fields.
+        Return:
+            Response: The response of the update.
+        """
+
+        if not item.success:
+            return item
+
+        item = item.message
+        for field, value in data.items():
+            item[field] = value
+
+        save = item.partial_save()
+        return response.Response(
+            status=response.Status.OK if save else response.Status.ERROR,
+            message=item)
+
+    def delete(self, item):
+        """Delete an item.
+
+        Args:
+            item (DynamoDbItem): The dynamodb item to update.
+        Return:
+            Response: the response of the update.
+        """
+
+        deleted = item.delete()
+        return response.Response(
+            status=response.Status.OK if deleted else response.Status.ERROR,
+            message=None)
 
     def fetch(self, query, limit=None):
         """Fetch one or more entries.
@@ -74,7 +111,7 @@ class TableDynamo(schema.Table):
         for query_segment in query.items():
             key, value = query_segment
 
-            if isinstance(value, Equal):
+            if isinstance(value, operations.Equal):
                 data[key + '__eq'] = value.value
 
         if index:
@@ -90,8 +127,8 @@ class TableDynamo(schema.Table):
                 message=[])
 
         return response.Response(
-            status=Status.OK,
-            message=[dict(obj) for obj in dynamo])
+            status=response.Status.OK,
+            message=[obj for obj in dynamo])
 
     def fetch_one(self, **query):
         """Get one item.
@@ -103,22 +140,34 @@ class TableDynamo(schema.Table):
                 if not found, the status is set to NOT_FOUND.
         """
 
+        default_response = response.Response(
+            status=response.Status.NOT_FOUND,
+            message=None)
         field_names = list(query.keys())
+
+        required = 1
         is_hash = self.hash in field_names
         is_range = self.range in field_names
+        if is_range:
+            required = 2
+
         item = None
 
-        if len(query) < 3 and is_hash or is_range:
+        if len(query) == required and is_hash:
             data = dict()
-            if is_hash:
-                data[self.hash] = query.get(self.hash)
+            data[self.hash] = query.get(self.hash).value
+
             if is_range:
-                data[self.range] = query.get(self.range)
-            item = dict(self.table.get_item(**data))
+                data[self.range] = query.get(self.range).value
+
+            try:
+                item = self.table.get_item(**data)
+            except:
+                return default_response
 
         if not item:
-            data = self.fetch(query, limit=1).response
-            if len(data) == 1:
+            data = self.fetch(query, limit=1).message
+            if data and len(data) == 1:
                 item = data[0]
 
         if item:
@@ -126,9 +175,7 @@ class TableDynamo(schema.Table):
                 status=response.Status.OK,
                 message=item)
 
-        return response.Response(
-            status=response.Status.NOT_FOUND,
-            message=None)
+        return default_response
 
     def create_table(self):
         """Create a dynamodb table.
@@ -141,6 +188,7 @@ class TableDynamo(schema.Table):
         global_secondary_index = []
 
         attributes = []
+        attribute_keys = set()
         indexes = {}
         indexes[schema.Index.PRIMARY] = None
 
@@ -154,18 +202,22 @@ class TableDynamo(schema.Table):
                 ReadCapacityUnits=index.read_capacity,
                 WriteCapacityUnits=index.write_capacity)
 
-            attributes.append(dict(
-                AttributeName=index.hash,
-                AttributeType=DynamoType.get(hash_field.basetype)))
+            if index.hash not in attribute_keys:
+                attribute_keys.add(index.hash)
+                attributes.append(dict(
+                    AttributeName=index.hash,
+                    AttributeType=DynamoType.get(hash_field.basetype)))
 
             key_schema = [dict(
                 AttributeName=index.hash,
                 KeyType='HASH')]
 
             if range_field:
-                attributes.append(dict(
-                    AttributeName=index.range,
-                    AttributeType=DynamoType.get(range_field.basetype)))
+                if index.range not in attribute_keys:
+                    attribute_keys.add(index.range)
+                    attributes.append(dict(
+                        AttributeName=index.range,
+                        AttributeType=DynamoType.get(range_field.basetype)))
 
                 key_schema.append(dict(
                     AttributeName=index.range,
@@ -176,11 +228,15 @@ class TableDynamo(schema.Table):
                 indexes[index.type] = key_schema
                 continue
 
-            indexes.setdefault(index.type, []).append(dict(
+            response = dict(
                 IndexName=index.name,
                 KeySchema=key_schema,
-                ProvisionedThroughput=provision,
-                Projection={'ProjectionType': 'ALL'}))
+                Projection={'ProjectionType': 'ALL'})
+
+            if index.type == schema.Index.GLOBAL:
+                response.update(ProvisionedThroughput=provision)
+
+            indexes.setdefault(index.type, []).append(response)
 
         self.table.connection.create_table(
             attributes, self.name, indexes.get(schema.Index.PRIMARY),

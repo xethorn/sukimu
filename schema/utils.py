@@ -17,3 +17,20 @@ def key_dict(dictionary, default=None):
     """
 
     return {key: default for key in dictionary.keys()}
+
+
+def key_exclude(dictionary, keys):
+    """Exclude all the keys of a dictionary.
+
+    This method removes all the keys from a dictionary that have been passed
+    as a second parameter.
+
+    Args:
+        dictionary (dict): The used dictionary.
+        keys (list): The keys of the dictionary.
+
+    Return:
+        Dictionary: The dictionary without the keys.
+    """
+
+    return {key: val for key, val in dictionary.items() if key not in keys}

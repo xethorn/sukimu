@@ -132,7 +132,11 @@ class Schema():
                 continue
 
             try:
-                data[name] = field.validate(values.get(name))
+                value = values.get(name)
+                if isinstance(value, operations.Base):
+                    value = value.value
+
+                data[name] = field.validate(value)
 
             except exceptions.FieldException as e:
                 errors[name] = e
@@ -176,10 +180,11 @@ class Schema():
         for index in self.indexes:
             keys = index.keys
             query = {key: operations.Equal(data.get(key)) for key in keys}
-            ancestor = self.fetch_one(query)
+            ancestor = self.fetch_one(**query)
             if ancestor.success:
-                errors.update({
-                    key: exceptions.FIELD_ALREADY_USED for key in keys})
+                if not current or dict(ancestor.message) != dict(current):
+                    errors.update({
+                        key: exceptions.FIELD_ALREADY_USED for key in keys})
 
         status = response.Status.OK
         if errors:
@@ -223,19 +228,24 @@ class Schema():
         """Query the table to find all the models that correspond to the query.
         """
 
-        if not query:
-            return
+        validation_response = self.validate(query, operation=operations.READ)
+        if not validation_response.success:
+            return validation_response
 
         return self.table.fetch(query, limit=limit)
 
     def fetch_one(self, **query):
+        validation_response = self.validate(query, operation=operations.READ)
+        if not validation_response.success:
+            return validation_response
+
         return self.table.fetch_one(**query)
 
     def create(self, **data):
         """Create a model from the data passed.
         """
 
-        validation = self.validate(data, operation=SchemaOperation.CREATE)
+        validation = self.validate(data, operation=operations.CREATE)
         if not validation.success:
             return validation
 
@@ -243,22 +253,49 @@ class Schema():
         if not check.success:
             return check
 
-        return self.table.create(data)
+        self.table.create(data)
+        return response.Response(
+            message=data,
+            status=response.Status.OK)
 
-    def update(self, source, data):
+    def update(self, source, **data):
         """Update the model from the data passed.
         """
 
-        self.validate(data)
-        self.validate(source)
+        if not source:
+            return response.create_error_response(
+                message='The source cannot be empty.')
 
-        return self.table.update(source, data)
+        data = utils.key_exclude(data, source.keys())
+        data = self.validate(data, operation=operations.READ)
+        if not data.success:
+            return data
 
-    def delete(self, source):
+        # Recreate the object - check ancestors.
+        current = self.fetch_one(**{
+            key: operations.Equal(val) for key, val in source.items()})
+        if not current.success:
+            return current
+
+        fields = response.Response(
+            message=dict(list(source.items()) + list(data.message.items())),
+            status=response.Status.OK)
+
+        ancestors = self.ensure_indexes(fields, current.message)
+        if not ancestors.success:
+            return ancestors
+
+        return self.table.update(current, fields.message)
+
+    def delete(self, **source):
         """Delete the model(s) from the data passed.
         """
 
-        return self.table.delete(source)
+        item = self.fetch_one(**source)
+        if not item.success:
+            return response
+
+        return self.table.delete(item.message)
 
 
 class Table():
