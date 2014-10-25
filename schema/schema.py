@@ -195,7 +195,14 @@ class Schema():
 
         Generated fields may have some dependencies. If a specific has been
         updated for instance, the generated field will also need to be updated.
-        If the generated field needs to be updated everytime
+        If the generated field needs to be updated everytime.
+
+        Args:
+            dependencies (dict): The dependencies for this specific generated
+                field.
+
+        Return:
+            Response: the response with the generated value.
         """
 
         return NotImplemented
@@ -208,9 +215,7 @@ class Schema():
         """
 
         def wrapper(method):
-            self.extensions.update({
-                name: method
-            })
+            self.extensions.update({name: method})
             return method
         return wrapper
 
@@ -244,15 +249,16 @@ class Schema():
         """Update the model from the data passed.
         """
 
-        pass
+        self.validate(data)
+        self.validate(source)
+
+        return self.table.update(source, data)
 
     def delete(self, source):
         """Delete the model(s) from the data passed.
         """
 
-        self.table.delete(source)
-
-        pass
+        return self.table.delete(source)
 
 
 class Table():
