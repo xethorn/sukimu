@@ -168,7 +168,7 @@ class Schema():
         """
 
         if not validation_response.success:
-            return
+            return validation_response
 
         data = validation_response.message
         errors = {}
@@ -257,7 +257,8 @@ class Schema():
 class Table():
 
     def __init__(self, name):
-        pass
+        self.name = name
+        self.indexes = {}
 
     def set_schema(self, schema):
         self.schema = schema
@@ -307,6 +308,6 @@ class Index():
     LOCAL = 2
     GLOBAL = 3
 
-    def __init__(self, *keys, primary=False):
+    def __init__(self, *keys, name=None):
         self.name = name
-        self.keys = keys
+        self.keys = list(keys)
