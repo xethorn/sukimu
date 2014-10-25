@@ -3,7 +3,7 @@ Schema
 
 * Licence: `MIT`
 
-Schemas defines the structure of the fields of your table. The schema handles
+Schemas define the structure of the fields of your table. The schema handles
 fields validations, and ensure index unicity. There are 5 main concepts around
 the schemas:
 
