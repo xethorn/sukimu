@@ -120,10 +120,10 @@ class Schema():
         success = False
         items = set(values.keys())
 
-        if operation is operation.READ and not values:
-            return response.Response.create_success_response()
+        if operation is operations.READ and not values:
+            return response.create_success_response()
 
-        if operation is operation.CREATE:
+        if operation is operations.CREATE:
             items = set(self.fields.keys())
 
         for name in items:
@@ -134,7 +134,7 @@ class Schema():
             try:
                 data[name] = field.validate(values.get(name))
 
-            except FieldException as e:
+            except exceptions.FieldException as e:
                 errors[name] = e
                 status = False
 
@@ -178,14 +178,15 @@ class Schema():
             query = {key: operations.Equal(data.get(key)) for key in keys}
             ancestor = self.fetch_one(query)
             if ancestor.success:
-                error.update({
+                errors.update({
                     key: exceptions.FIELD_ALREADY_USED for key in keys})
 
         status = response.Status.OK
         if errors:
             status = response.Status.FIELD_VALUE_ALREADY_USED
 
-        return Response(
+        return response.Response(
+            message=None,
             status=status,
             errors=errors)
 
@@ -197,7 +198,7 @@ class Schema():
         If the generated field needs to be updated everytime
         """
 
-        pass
+        return NotImplemented
 
     def extension(self, name):
         """Register an extension.
@@ -282,25 +283,25 @@ class Table():
         return
 
     def create(self, data):
-        raise Exception()
+        return NotImplemented
 
     def delete(self, source):
-        raise Exception()
+        return NotImplemented
 
     def update(self, source, data):
-        raise Exception()
+        return NotImplemented
 
     def fetch(self, query, limit=None):
-        raise Exception()
+        return NotImplemented
 
     def fetch_one(self, **query):
-        raise Exception()
+        return NotImplemented
 
     def is_entry_equal(self, entry, compare):
-        raise Exception()
+        return NotImplemented
 
     def create_table(self):
-        raise Exception()
+        return NotImplemented
 
 
 class Index():

@@ -29,7 +29,7 @@ def test_field_validators(monkeypatch):
 
 
 def test_validation():
-    f = fields.Field()
+    f = fields.Field(required=True)
     wrong_values = (list(), set(), dict())
     assert f.validate('Hello') == 'Hello'
     for wrong_value in wrong_values:

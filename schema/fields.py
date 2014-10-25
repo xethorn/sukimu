@@ -49,8 +49,10 @@ class Field():
             The value.
         """
 
-        if self.required and not value:
-            raise exceptions.FIELD_REQUIRED
+        if not value:
+            if self.required:
+                raise exceptions.FIELD_REQUIRED
+            return value
 
         if not isinstance(value, self.basetype):
             raise exceptions.FIELD_WRONG_FORMAT
