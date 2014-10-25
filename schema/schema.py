@@ -120,10 +120,10 @@ class Schema():
         success = False
         items = set(values.keys())
 
-        if operation is operation.READ and not values:
-            return response.Response.create_success_response()
+        if operation is operations.READ and not values:
+            return response.create_success_response()
 
-        if operation is operation.CREATE:
+        if operation is operations.CREATE:
             items = set(self.fields.keys())
 
         for name in items:
@@ -132,9 +132,13 @@ class Schema():
                 continue
 
             try:
-                data[name] = field.validate(values.get(name))
+                value = values.get(name)
+                if isinstance(value, operations.Base):
+                    value = value.value
 
-            except FieldException as e:
+                data[name] = field.validate(value)
+
+            except exceptions.FieldException as e:
                 errors[name] = e
                 status = False
 
@@ -168,7 +172,7 @@ class Schema():
         """
 
         if not validation_response.success:
-            return
+            return validation_response
 
         data = validation_response.message
         errors = {}
@@ -176,16 +180,18 @@ class Schema():
         for index in self.indexes:
             keys = index.keys
             query = {key: operations.Equal(data.get(key)) for key in keys}
-            ancestor = self.fetch_one(query)
+            ancestor = self.fetch_one(**query)
             if ancestor.success:
-                error.update({
-                    key: exceptions.FIELD_ALREADY_USED for key in keys})
+                if not current or dict(ancestor.message) != dict(current):
+                    errors.update({
+                        key: exceptions.FIELD_ALREADY_USED for key in keys})
 
         status = response.Status.OK
         if errors:
             status = response.Status.FIELD_VALUE_ALREADY_USED
 
-        return Response(
+        return response.Response(
+            message=None,
             status=status,
             errors=errors)
 
@@ -194,10 +200,17 @@ class Schema():
 
         Generated fields may have some dependencies. If a specific has been
         updated for instance, the generated field will also need to be updated.
-        If the generated field needs to be updated everytime
+        If the generated field needs to be updated everytime.
+
+        Args:
+            dependencies (dict): The dependencies for this specific generated
+                field.
+
+        Return:
+            Response: the response with the generated value.
         """
 
-        pass
+        return NotImplemented
 
     def extension(self, name):
         """Register an extension.
@@ -207,9 +220,7 @@ class Schema():
         """
 
         def wrapper(method):
-            self.extensions.update({
-                name: method
-            })
+            self.extensions.update({name: method})
             return method
         return wrapper
 
@@ -217,19 +228,24 @@ class Schema():
         """Query the table to find all the models that correspond to the query.
         """
 
-        if not query:
-            return
+        validation_response = self.validate(query, operation=operations.READ)
+        if not validation_response.success:
+            return validation_response
 
         return self.table.fetch(query, limit=limit)
 
     def fetch_one(self, **query):
+        validation_response = self.validate(query, operation=operations.READ)
+        if not validation_response.success:
+            return validation_response
+
         return self.table.fetch_one(**query)
 
     def create(self, **data):
         """Create a model from the data passed.
         """
 
-        validation = self.validate(data, operation=SchemaOperation.CREATE)
+        validation = self.validate(data, operation=operations.CREATE)
         if not validation.success:
             return validation
 
@@ -237,27 +253,56 @@ class Schema():
         if not check.success:
             return check
 
-        return self.table.create(data)
+        self.table.create(data)
+        return response.Response(
+            message=data,
+            status=response.Status.OK)
 
-    def update(self, source, data):
+    def update(self, source, **data):
         """Update the model from the data passed.
         """
 
-        pass
+        if not source:
+            return response.create_error_response(
+                message='The source cannot be empty.')
 
-    def delete(self, source):
+        data = utils.key_exclude(data, source.keys())
+        data = self.validate(data, operation=operations.READ)
+        if not data.success:
+            return data
+
+        # Recreate the object - check ancestors.
+        current = self.fetch_one(**{
+            key: operations.Equal(val) for key, val in source.items()})
+        if not current.success:
+            return current
+
+        fields = response.Response(
+            message=dict(list(source.items()) + list(data.message.items())),
+            status=response.Status.OK)
+
+        ancestors = self.ensure_indexes(fields, current.message)
+        if not ancestors.success:
+            return ancestors
+
+        return self.table.update(current, fields.message)
+
+    def delete(self, **source):
         """Delete the model(s) from the data passed.
         """
 
-        self.table.delete(source)
+        item = self.fetch_one(**source)
+        if not item.success:
+            return response
 
-        pass
+        return self.table.delete(item.message)
 
 
 class Table():
 
     def __init__(self, name):
-        pass
+        self.name = name
+        self.indexes = {}
 
     def set_schema(self, schema):
         self.schema = schema
@@ -281,25 +326,25 @@ class Table():
         return
 
     def create(self, data):
-        raise Exception()
+        return NotImplemented
 
     def delete(self, source):
-        raise Exception()
+        return NotImplemented
 
     def update(self, source, data):
-        raise Exception()
+        return NotImplemented
 
     def fetch(self, query, limit=None):
-        raise Exception()
+        return NotImplemented
 
     def fetch_one(self, **query):
-        raise Exception()
+        return NotImplemented
 
     def is_entry_equal(self, entry, compare):
-        raise Exception()
+        return NotImplemented
 
     def create_table(self):
-        raise Exception()
+        return NotImplemented
 
 
 class Index():
@@ -307,6 +352,6 @@ class Index():
     LOCAL = 2
     GLOBAL = 3
 
-    def __init__(self, *keys, primary=False):
+    def __init__(self, *keys, name=None):
         self.name = name
-        self.keys = keys
+        self.keys = list(keys)

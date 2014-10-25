@@ -3,13 +3,13 @@ CREATE = 1
 UPDATE = 2
 DELETE = 3
 FIND_UNIQUE = 4
-FIND_PRIMARY = 5
+FIND_INDEX = 5
 FIND_ONE_PRIMARY = 6
 
 
 class Base():
-    def __init__(self, values):
-        self.values = values
+    def __init__(self, value):
+        self.value = value
 
 
 class Equal(Base):
