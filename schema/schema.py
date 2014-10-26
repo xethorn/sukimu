@@ -253,7 +253,7 @@ class Schema():
         if not check.success:
             return check
 
-        self.table.create(validation.message)
+        data = self.table.create(validation.message)
         return response.Response(
             message=data,
             status=response.Status.OK)
