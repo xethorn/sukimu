@@ -253,7 +253,7 @@ class Schema():
         if not check.success:
             return check
 
-        self.table.create(data)
+        self.table.create(validation.message)
         return response.Response(
             message=data,
             status=response.Status.OK)
@@ -338,9 +338,6 @@ class Table():
         return NotImplemented
 
     def fetch_one(self, **query):
-        return NotImplemented
-
-    def is_entry_equal(self, entry, compare):
         return NotImplemented
 
     def create_table(self):
