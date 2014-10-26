@@ -46,6 +46,8 @@ class TableDynamo(schema.Table):
         Return:
             Dictionnary: The data that was added.
         """
+        # FIXME: https://github.com/boto/boto/issues/2708
+        self.table.schema = None
 
         self.table.put_item(data=data)
         return data
@@ -59,6 +61,9 @@ class TableDynamo(schema.Table):
         Return:
             Response: The response of the update.
         """
+
+        # FIXME: https://github.com/boto/boto/issues/2708
+        self.table.schema = None
 
         if not item.success:
             return item
@@ -101,6 +106,9 @@ class TableDynamo(schema.Table):
             List: All the fetched items.
         """
 
+        # FIXME: https://github.com/boto/boto/issues/2708
+        self.table.schema = None
+
         data = dict()
         keys = list(query.keys())
         index = self.find_index(keys)
@@ -139,6 +147,9 @@ class TableDynamo(schema.Table):
             Response: If the item is found, it is provided in the message,
                 if not found, the status is set to NOT_FOUND.
         """
+
+        # FIXME: https://github.com/boto/boto/issues/2708
+        self.table.schema = None
 
         default_response = response.Response(
             status=response.Status.NOT_FOUND,
