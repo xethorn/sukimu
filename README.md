@@ -48,7 +48,7 @@ Those fields are saved into the database.
 Field operations are used for two things: the first is to validate all the
 possible value this operation contains (by using the field itself) and the
 second is to write the correct query. For example:
-``fetch_one(dict(username=Equal('michael')))``, will convert the
+``fetch_one(username=Equal('michael'))``, will convert the
 key into ```username__eq``` in dynamodb.
 
 Author
