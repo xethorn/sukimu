@@ -9,6 +9,7 @@ from schema.dynamodb import IndexDynamo
 from schema.dynamodb import TableDynamo
 from schema.fields import Field
 from schema.operations import Equal
+from schema.operations import In
 from schema.schema import Schema, Index
 from tests.fixtures import dynamodb
 
@@ -89,6 +90,9 @@ def test_delete_an_entry_for_user(user_schema):
 
     resp = user_schema.delete(id=Equal('30'))
     assert resp.success
+
+    resp = user_schema.fetch_one(id=30)
+    assert not resp.success
 
 
 def test_update_an_entry_on_existing_key(user_schema):
@@ -231,6 +235,14 @@ def test_fetch_on_index(thread_schema):
         thread_title=Equal('title'), thread_author=Equal('user'))
     assert resp.success
     assert resp.message[0].get('forum_name') == 'News'
+
+
+def test_fetch_many(user_schema):
+    user_schema.create(id='30', username='michael1')
+    user_schema.create(id='40', username='michael2')
+    resp = user_schema.fetch(username=In('michael1', 'michael2'))
+    assert resp.success
+    assert len(resp.message) == 2
 
 
 def test_dynamo_table_creation(table_name):

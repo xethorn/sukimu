@@ -30,3 +30,8 @@ class Contains(Base):
 
 class Exclude(Base):
     pass
+
+
+class In(Base):
+    def __init__(self, *value):
+        self.value = value

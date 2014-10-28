@@ -133,6 +133,12 @@ class Schema():
 
             try:
                 value = values.get(name)
+
+                if isinstance(value, operations.In):
+                    values = value.value
+                    data[name] = [field.validate(val) for val in values]
+                    continue
+
                 if isinstance(value, operations.Base):
                     value = value.value
 
