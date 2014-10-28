@@ -122,6 +122,9 @@ class TableDynamo(schema.Table):
             if isinstance(value, operations.Equal):
                 data[key + '__eq'] = value.value
 
+            elif isinstance(value, operations.In):
+                return self.fetch_many(key, value.value)
+
         if index:
             if index.name:
                 data['index'] = index.name
@@ -137,6 +140,30 @@ class TableDynamo(schema.Table):
         return response.Response(
             status=response.Status.OK,
             message=[obj for obj in dynamo])
+
+    def fetch_many(self, key, values):
+        """Fetch more than one item.
+
+        Method used to fetch more than one item based on one key and many
+        values.
+
+        Args:
+            key (string): Name of the key.
+            values (list): All the values to fetch.
+        """
+
+        message = []
+        for value in values:
+            message.append(
+                self.fetch_one(**{key: operations.Equal(value)}).message)
+
+        status = response.Status.OK
+        if not message:
+            status = response.Status.NOT_FOUND
+
+        return response.Response(
+            status=response.Status.OK,
+            message=message)
 
     def fetch_one(self, **query):
         """Get one item.
