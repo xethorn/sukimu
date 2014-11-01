@@ -267,7 +267,8 @@ class Schema():
                 item.
         """
 
-        if isinstance(fields, list):
+        if (isinstance(fields, list) or isinstance(fields, tuple) or
+                isinstance(fields, set)):
             fields = utils.dict_from_strings(fields)
 
         data = response.message
