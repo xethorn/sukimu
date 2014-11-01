@@ -108,3 +108,11 @@ def test_ensure_index(monkeypatch, full_schema):
     assert not resp.success
     assert 'id' in resp.errors
     assert 'username' in resp.errors
+
+
+def test_extensions(full_schema):
+    @full_schema.extension('stats')
+    def stats(item, fields):
+        return
+
+    assert full_schema.extensions.get('stats')

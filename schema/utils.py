@@ -34,3 +34,32 @@ def key_exclude(dictionary, keys):
     """
 
     return {key: val for key, val in dictionary.items() if key not in keys}
+
+
+def dict_from_strings(array, separator='.'):
+    """Recreate a dictionary from strings that are in an array.
+
+    If you have strings such as "user.id", "user.name", those ideally can be
+    turned into a dictionary where user is the principal key and name, id two
+    values of this dictionary.
+
+    Args:
+        array (array): The array to turn into a dict.
+    Return:
+        dict: The dictionary.
+    """
+
+    dictionary = {}
+
+    for string in array:
+        parts = string.split(separator)
+        key = parts[0]
+        last_parts = separator.join(parts[1:])
+
+        if last_parts:
+            dictionary.setdefault(key, {}).update(
+                dict_from_strings([last_parts], separator=separator))
+        else:
+            dictionary.update({key: None})
+
+    return dictionary
