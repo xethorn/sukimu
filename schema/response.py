@@ -75,6 +75,13 @@ class Response():
 
 def create_error_response(errors=None, message=None):
     """Create an error response.
+
+    Args:
+        errors (dict): List of errors (if any.)
+        message: Message that will be provided as part of the response
+            (optional.)
+    Return:
+        `Response`: The error response.
     """
 
     return Response(
@@ -85,6 +92,11 @@ def create_error_response(errors=None, message=None):
 
 def create_success_response(message=None):
     """Create a success response.
+
+    Args:
+        message: The response from the schema (optional.)
+    Return:
+        `Response`: a successful response.
     """
 
     return Response(

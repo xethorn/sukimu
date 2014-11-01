@@ -290,3 +290,18 @@ def test_create_table_without_fields(table_name):
 
     with pytest.raises(Exception):
         tb.table.create_table()
+
+
+def test_extension_usage(user_schema):
+    @user_schema.extension('stats')
+    def stats(item, fields):
+        return {'days': 10, 'fields': fields}
+
+    response = user_schema.create(id='testextension', username='michael')
+    assert response.success
+
+    response = user_schema.fetch_one(
+        username=Equal('michael'), fields=['stats.foobar', 'stats.tests.bar'])
+    assert response.stats.get('days') == 10
+    assert 'foobar' in response.stats.get('fields')
+    assert 'bar' in response.stats.get('fields').get('tests')

@@ -77,6 +77,7 @@ Create extensions::
 """
 
 from collections import namedtuple
+from multiprocessing import pool
 
 from schema import exceptions
 from schema import operations
@@ -230,7 +231,7 @@ class Schema():
             return method
         return wrapper
 
-    def fetch(self, limit=None, **query):
+    def fetch(self, fields=None, limit=None, **query):
         """Query the table to find all the models that correspond to the query.
         """
 
@@ -238,14 +239,84 @@ class Schema():
         if not validation_response.success:
             return validation_response
 
-        return self.table.fetch(query, limit=limit)
+        schema_response = self.table.fetch(query, limit=limit)
 
-    def fetch_one(self, **query):
+        if schema_response.success and fields:
+            self.decorate_response(schema_response, fields)
+
+        return schema_response
+
+    def fetch_one(self, fields=None, **query):
         validation_response = self.validate(query, operation=operations.READ)
+
         if not validation_response.success:
             return validation_response
+        schema_response = self.table.fetch_one(**query)
 
-        return self.table.fetch_one(**query)
+        if schema_response.success and fields:
+            self.decorate_response(schema_response, fields)
+
+        return schema_response
+
+    def decorate_response(self, response, fields):
+        """Decorate a response.
+
+        Args:
+            item (dict): The current item.
+            fields (dict): The fields that are need to be provided to the main
+                item.
+        """
+
+        if isinstance(fields, list):
+            fields = utils.dict_from_strings(fields)
+
+        data = response.message
+        if isinstance(data, list):
+            data = [self.decorate(dict(item), fields) for item in data]
+        else:
+            data = self.decorate(dict(data), fields)
+        response.message = data
+
+    def decorate(self, item, fields):
+        """Decorate an item with more fields.
+
+        Decoration means that some fields are going to be added to the initial
+        item (using the extension with the same name.) The fields that are
+        expected from this extension are also being passed.
+
+        Fields are also cleaning the response object (unless unspecified.) For
+        instance if you fetch one `user` with the fields `user.id`, only the id
+        will be returned.
+
+        Args:
+            item (dict): The current item.
+            fields (dict): The fields that are need to be provided to the main
+                item.
+        """
+
+        def activate_extension(field):
+            extension = self.extensions.get(field)
+            if extension:
+                item.update({field: extension(item, fields.get(field))})
+            return
+
+        table_fields = fields.pop(self.table.name, -1)
+
+        if len(fields):
+            pool_thread = pool.ThreadPool(processes=len(fields))
+            pool_thread.map(activate_extension, fields)
+
+        if table_fields == -1:
+            return item
+
+        keys = item.keys()
+        for key in keys:
+            if key not in table_fields:
+                item.pop(key)
+
+            if len(item) == len(table_fields):
+                return
+        return item
 
     def create(self, **data):
         """Create a model from the data passed.
