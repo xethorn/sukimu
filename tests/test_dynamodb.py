@@ -91,7 +91,7 @@ def test_delete_an_entry_for_user(user_schema):
     resp = user_schema.delete(id=Equal('30'))
     assert resp.success
 
-    resp = user_schema.fetch_one(id=30)
+    resp = user_schema.fetch_one(id=Equal(30))
     assert not resp.success
 
 
