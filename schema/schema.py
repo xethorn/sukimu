@@ -186,7 +186,17 @@ class Schema():
 
         for index in self.indexes:
             keys = index.keys
-            query = {key: operations.Equal(data.get(key)) for key in keys}
+
+            query = dict()
+            for key in keys:
+                key_value = data.get(key)
+                if not key_value:
+                    break
+                query.update({key: operations.Equal(key_value)})
+
+            if not query:
+                continue
+
             ancestor = self.fetch_one(**query)
             if ancestor.success:
                 if not current or dict(ancestor.message) != dict(current):
