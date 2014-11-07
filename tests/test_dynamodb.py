@@ -297,6 +297,10 @@ def test_extension_usage(user_schema):
     def stats(item, fields):
         return {'days': 10, 'fields': fields}
 
+    @user_schema.extension('history')
+    def history(item, fields):
+        return {'length': 20}
+
     response = user_schema.create(id='testextension', username='michael')
     assert response.success
 
@@ -305,3 +309,11 @@ def test_extension_usage(user_schema):
     assert response.stats.get('days') == 10
     assert 'foobar' in response.stats.get('fields')
     assert 'bar' in response.stats.get('fields').get('tests')
+
+    response = user_schema.fetch_one(
+        username=Equal('michael'),
+        fields=['history', 'stats.foobar', 'stats.tests.bar'])
+    assert response.stats.get('days') == 10
+    assert 'foobar' in response.stats.get('fields')
+    assert 'bar' in response.stats.get('fields').get('tests')
+    assert response.history.get('length') == 20

@@ -77,7 +77,7 @@ Create extensions::
 """
 
 from collections import namedtuple
-from multiprocessing import pool
+from threading import Thread
 
 from schema import exceptions
 from schema import operations
@@ -295,7 +295,7 @@ class Schema():
                 item.
         """
 
-        def activate_extension(field):
+        def activate_extension(field, item):
             extension = self.extensions.get(field)
             if extension:
                 item.update({field: extension(item, fields.get(field))})
@@ -303,9 +303,14 @@ class Schema():
 
         table_fields = fields.pop(self.table.name, -1)
 
-        if len(fields):
-            pool_thread = pool.ThreadPool(processes=len(fields))
-            pool_thread.map(activate_extension, fields)
+        threads = []
+        for field in fields:
+            thread = Thread(target=activate_extension, args=(field, item))
+            thread.start()
+            threads.append(thread)
+
+        for thread in threads:
+            thread.join()
 
         if table_fields == -1:
             return item
