@@ -135,13 +135,10 @@ class Schema():
             try:
                 value = values.get(name)
 
-                if isinstance(value, operations.In):
-                    values = value.value
-                    data[name] = [field.validate(val) for val in values]
-                    continue
-
                 if isinstance(value, operations.Base):
-                    value = value.value
+                    value = value.validate(field)
+                    data[name] = value
+                    continue
 
                 data[name] = field.validate(value)
 
@@ -250,7 +247,6 @@ class Schema():
             return validation_response
 
         schema_response = self.table.fetch(query, limit=limit)
-
         if schema_response.success and fields:
             self.decorate_response(schema_response, fields)
 
@@ -261,8 +257,8 @@ class Schema():
 
         if not validation_response.success:
             return validation_response
-        schema_response = self.table.fetch_one(**query)
 
+        schema_response = self.table.fetch_one(**query)
         if schema_response.success and fields:
             self.decorate_response(schema_response, fields)
 

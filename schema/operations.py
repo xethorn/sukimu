@@ -11,6 +11,10 @@ class Base():
     def __init__(self, value):
         self.value = value
 
+    def validate(self, field):
+        self.value = field.validate(self.value)
+        return self.value
+
 
 class Equal(Base):
     pass
@@ -35,3 +39,7 @@ class Exclude(Base):
 class In(Base):
     def __init__(self, *value):
         self.value = value
+
+    def validate(self, field):
+        self.value = [field.validate(value) for value in self.value]
+        return self.value
