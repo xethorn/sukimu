@@ -180,13 +180,14 @@ class Schema():
 
         data = validation_response.message
         errors = {}
+        current = current or {}
 
         for index in self.indexes:
             keys = index.keys
 
             query = dict()
             for key in keys:
-                key_value = data.get(key)
+                key_value = data.get(key, current.get(key))
                 if not key_value:
                     break
                 query.update({key: operations.Equal(key_value)})
