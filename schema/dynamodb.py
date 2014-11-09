@@ -304,4 +304,5 @@ class IndexDynamo(schema.Index):
 
 DynamoType = {
     str: 'S',
+    int: 'N',
 }
