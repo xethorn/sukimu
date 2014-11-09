@@ -71,6 +71,16 @@ def test_create_an_entry_with_wrong_field(user_schema):
     assert resp.status is response.Status.NOT_FOUND
 
 
+def test_extension(user_schema):
+    new_schema = user_schema.extends(
+        new_field=Field())
+    assert isinstance(new_schema, Schema)
+    assert new_schema.table.name == user_schema.table.name
+    assert len(new_schema.indexes) == len(user_schema.indexes)
+    assert len(new_schema.fields) -1 == len(user_schema.fields)
+    assert not new_schema.table.schema == user_schema
+
+
 def test_create_an_entry_for_user(user_schema):
     resp = user_schema.create(id='30', username='michael')
     assert resp.success

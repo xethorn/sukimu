@@ -63,3 +63,37 @@ def dict_from_strings(array, separator='.'):
             dictionary.update({key: None})
 
     return dictionary
+
+
+def dict_merge(*dicts):
+    """Merge all dictionnary into one.
+
+    In the event of a collision, the last dictionary is the one that will
+    override the initial value.
+
+    Args:
+        dicts (list): List of all the dictionary to merge.
+    Return:
+        dict: The dictionary that contains all the other ones.
+    """
+
+    dictionaries = list()
+    for d in dicts:
+        dictionaries = dictionaries + list(d.items())
+
+    return dict(dictionaries)
+
+
+def list_merge(*lists):
+    """Merge all the lists into one.
+
+    Args:
+        lists (list): List of all the lists to merge.
+    Return:
+        list: the result of the merged lists.
+    """
+
+    final_list = []
+    for l in lists:
+        final_list = final_list + l
+    return final_list
