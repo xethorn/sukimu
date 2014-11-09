@@ -297,13 +297,14 @@ class IndexDynamo(schema.Index):
 
     def __init__(
             self, type, *keys, name=None, read_capacity=None,
-            write_capacity=None):
+            write_capacity=None, unique=True):
         self.name = name
         self.type = type
         self.hash = keys[0]
         self.range = keys[1] if len(keys) == 2 else None
         self.read_capacity = read_capacity
         self.write_capacity = write_capacity
+        self.unique = unique
 
     @property
     def keys(self):
