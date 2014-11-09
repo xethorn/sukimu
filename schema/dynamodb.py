@@ -19,10 +19,20 @@ class TableDynamo(schema.Table):
         """
 
         self.name = name
+        self.connection = connection
         self.table = table.Table(name, connection=connection)
         self.indexes = {}
         self.hash = None
         self.range = None
+
+    def copy(self):
+        """Create a copy of the current object.
+
+        Return:
+            TableDynamo: Copy of the current instance.
+        """
+
+        return self.__class__(self.name, self.connection)
 
     def add_index(self, index):
         """Add an index into the tbale.

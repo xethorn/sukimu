@@ -77,6 +77,7 @@ Create extensions::
 """
 
 from collections import namedtuple
+from copy import deepcopy
 from threading import Thread
 
 from schema import exceptions
@@ -387,6 +388,20 @@ class Schema():
 
         return self.table.delete(item.message)
 
+    def extends(self, **fields):
+        """Extending a Schema.
+
+        Extension of a schema allows to add new fields. If you have a table
+        with users, some users might require different fields (for instance,
+        if the user has a gaming console, you might want to get more details
+        about this gaming console.)
+        """
+
+        fields = utils.dict_merge(self.fields, fields)
+        table = self.table.copy()
+        indexes = deepcopy(self.indexes)
+        return Schema(table, *indexes, **fields)
+
 
 class Table():
 
@@ -431,6 +446,9 @@ class Table():
         return NotImplemented
 
     def create_table(self):
+        return NotImplemented
+
+    def copy(self):
         return NotImplemented
 
 
