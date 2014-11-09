@@ -184,6 +184,11 @@ class Schema():
         current = current or {}
 
         for index in self.indexes:
+            # Some databases allow to have non unique indexes. In this case,
+            # we ignore this index for the check.
+            if not index.unique:
+                continue
+
             keys = index.keys
 
             query = dict()
@@ -457,6 +462,7 @@ class Index():
     LOCAL = 2
     GLOBAL = 3
 
-    def __init__(self, *keys, name=None):
+    def __init__(self, *keys, name=None, unique=True):
         self.name = name
         self.keys = list(keys)
+        self.unique = unique
