@@ -328,7 +328,7 @@ class Schema():
         if table_fields == -1:
             return item
 
-        keys = item.keys()
+        keys = list(item.keys())
         for key in keys:
             if key not in table_fields:
                 item.pop(key)
