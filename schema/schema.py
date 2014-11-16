@@ -334,7 +334,7 @@ class Schema():
                 item.pop(key)
 
             if len(item) == len(table_fields):
-                return
+                return item
         return item
 
     def create(self, **data):
