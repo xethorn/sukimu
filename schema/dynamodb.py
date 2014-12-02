@@ -132,6 +132,9 @@ class TableDynamo(schema.Table):
             if isinstance(value, operations.Equal):
                 data[key + '__eq'] = value.value
 
+            elif isinstance(value, operations.Between):
+                data[key + '__between'] = value.value
+
             elif isinstance(value, operations.In):
                 return self.fetch_many(key, value.value)
 
