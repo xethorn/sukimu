@@ -36,10 +36,18 @@ class Exclude(Base):
     pass
 
 
-class In(Base):
+class MultipleInput(Base):
     def __init__(self, *value):
         self.value = value
 
     def validate(self, field):
         self.value = [field.validate(value) for value in self.value]
         return self.value
+
+
+class In(MultipleInput):
+    pass
+
+
+class Between(MultipleInput):
+    pass

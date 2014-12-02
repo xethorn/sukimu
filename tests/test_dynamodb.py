@@ -1,6 +1,7 @@
 import time
 import pytest
 import uuid
+from random import random
 
 from schema import exceptions
 from schema import response
@@ -10,6 +11,7 @@ from schema.dynamodb import TableDynamo
 from schema.fields import Field
 from schema.operations import Equal
 from schema.operations import In
+from schema.operations import Between
 from schema.schema import Schema, Index
 from tests.fixtures import dynamodb
 
@@ -52,6 +54,19 @@ def thread_schema():
         thread_title=Field(),
         thread_author=Field(),
         thread_content=Field())
+    schema.table.create_table()
+    return schema
+
+
+@pytest.fixture
+def stats_schema():
+    schema = Schema(
+        TableDynamo(table_name(), dynamodb.connection),
+        IndexDynamo(Index.PRIMARY, 'user_id', 'day_id',
+                    read_capacity=8, write_capacity=2),
+        user_id=Field(basetype=int),
+        day_id=Field(basetype=int),
+        metrics=Field(basetype=int))
     schema.table.create_table()
     return schema
 
@@ -253,6 +268,17 @@ def test_fetch_many(user_schema):
     resp = user_schema.fetch(username=In('michael1', 'michael2'))
     assert resp.success
     assert len(resp.message) == 2
+
+
+def test_between_request(stats_schema):
+    stats_schema.create(user_id=301, day_id=35, metrics=937)
+
+    for day in range(50):
+        metrics = int(random() * 400)
+        resp = stats_schema.create(user_id=300, day_id=day, metrics=metrics)
+
+    resp = stats_schema.fetch(user_id=Equal(300), day_id=Between(30, 40))
+    assert len(resp.message) == 11 # 40 is included
 
 
 def test_dynamo_table_creation(table_name):
