@@ -92,7 +92,7 @@ def test_extension(user_schema):
     assert isinstance(new_schema, Schema)
     assert new_schema.table.name == user_schema.table.name
     assert len(new_schema.indexes) == len(user_schema.indexes)
-    assert len(new_schema.fields) -1 == len(user_schema.fields)
+    assert len(new_schema.fields) - 1 == len(user_schema.fields)
     assert not new_schema.table.schema == user_schema
 
 
@@ -278,7 +278,7 @@ def test_between_request(stats_schema):
         resp = stats_schema.create(user_id=300, day_id=day, metrics=metrics)
 
     resp = stats_schema.fetch(user_id=Equal(300), day_id=Between(30, 40))
-    assert len(resp.message) == 11 # 40 is included
+    assert len(resp.message) == 11  # 40 is included
 
 
 def test_dynamo_table_creation(table_name):
@@ -344,12 +344,12 @@ def test_extension_usage(user_schema):
         username=Equal('michael'), fields=['stats.foobar', 'stats.tests.bar'])
     assert response.stats.get('days') == 10
     assert 'foobar' in response.stats.get('fields')
-    assert 'bar' in response.stats.get('fields').get('tests')
+    assert 'tests.bar' in response.stats.get('fields')
 
     response = user_schema.fetch_one(
         username=Equal('michael'),
         fields=['history', 'stats.foobar', 'stats.tests.bar'])
     assert response.stats.get('days') == 10
     assert 'foobar' in response.stats.get('fields')
-    assert 'bar' in response.stats.get('fields').get('tests')
+    assert 'tests.bar' in response.stats.get('fields')
     assert response.history.get('length') == 20

@@ -12,4 +12,5 @@ def test_dict_from_strings():
     response = utils.dict_from_strings(array)
     assert len(response) == 1
     assert len(response.get('user')) == 2
-    assert response.get('user').get('username') is None
+    assert 'username' in response.get('user')
+    assert 'stats.daily' in response.get('user')

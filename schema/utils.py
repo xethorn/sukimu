@@ -57,10 +57,9 @@ def dict_from_strings(array, separator='.'):
         last_parts = separator.join(parts[1:])
 
         if last_parts:
-            dictionary.setdefault(key, {}).update(
-                dict_from_strings([last_parts], separator=separator))
+            dictionary.setdefault(key, []).append(last_parts)
         else:
-            dictionary.update({key: None})
+            dictionary.update({key: []})
 
     return dictionary
 
