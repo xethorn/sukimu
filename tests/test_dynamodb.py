@@ -369,3 +369,19 @@ def test_extension_usage(user_schema):
     assert 'foobar' in response.stats.get('fields')
     assert 'tests.bar' in response.stats.get('fields')
     assert response.history.get('length') == 20
+
+
+def test_map_structure(table_name):
+    schema = Schema(
+        TableDynamo(table_name(), dynamodb.connection),
+        IndexDynamo(Index.PRIMARY, 'user_id'),
+        user_id=Field(basetype=int),
+        map_structure=Field(basetype=dict))
+        
+    schema.table.create_table()
+    resp = schema.create(
+        user_id='u8272', 
+        map_structure=dict(
+            foo='bar',
+            nested=dict(foo=29)))
+    assert resp.success
