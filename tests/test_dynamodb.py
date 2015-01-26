@@ -35,7 +35,8 @@ def user_schema():
         id=Field(),
         username=Field(),
         password=Field(),
-        randomfield=Field(basetype=int))
+        map_field=Field(basetype=dict),
+        random_field=Field(basetype=int))
     schema.table.create_table()
     return schema
 
@@ -76,10 +77,10 @@ def test_can_create_fixtures(user_schema, thread_schema):
 
 
 def test_create_an_entry_with_wrong_field(user_schema):
-    resp = user_schema.create(id='30', username='michael', randomfield='test')
+    resp = user_schema.create(id='30', username='michael', random_field='test')
     assert not resp.success
     assert isinstance(
-        resp.errors.get('randomfield'), exceptions.FieldException)
+        resp.errors.get('random_field'), exceptions.FieldException)
 
     resp = user_schema.fetch_one(id=Equal('30'))
     assert not resp.success
@@ -141,6 +142,21 @@ def test_create_an_entry_on_existing_user_id(user_schema):
     assert not resp.errors.get('username')
     assert resp.status is response.Status.FIELD_VALUE_ALREADY_USED
     assert isinstance(resp.errors.get('id'), exceptions.FieldException)
+
+
+def test_create_an_entry_with_map_data(user_schema):
+    resp = user_schema.create(
+        id='190',
+        username='emichael90',
+        map_field=dict(
+            key1='value',
+            key2=dict(
+                key1='value')))
+    assert resp.success
+
+    resp = user_schema.fetch_one(id=Equal('190'))
+    assert resp.success
+    assert isinstance(resp.message.get('map_field'), dict)
 
 
 def test_create_an_entry_on_existing_user_username(user_schema):
