@@ -357,7 +357,7 @@ def test_extension_usage(user_schema):
 
 def test_map_structure(table_name):
     schema = Schema(
-        TableDynamo(table_name(), dynamodb.connection),
+        TableDynamo(table_name, dynamodb.connection),
         IndexDynamo(Index.PRIMARY, 'user_id'),
         user_id=Field(basetype=int),
         map_structure=Field(basetype=dict))
