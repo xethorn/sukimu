@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='Schema',
-    version='0.0.1',
+    version='0.0.1a1',
     url='https://github.com/xethorn/schema',
     author='Michael Ortali',
     author_email='hello@xethorn.net',
