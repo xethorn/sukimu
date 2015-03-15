@@ -2,16 +2,18 @@ import time
 import pytest
 import uuid
 from random import random
+from random import shuffle
 
+from schema import consts
 from schema import exceptions
 from schema import response
 from schema.dynamodb import IndexDynamo
 from schema.dynamodb import IndexDynamo
 from schema.dynamodb import TableDynamo
 from schema.fields import Field
+from schema.operations import Between
 from schema.operations import Equal
 from schema.operations import In
-from schema.operations import Between
 from schema.schema import Schema, Index
 from tests.fixtures import dynamodb
 
@@ -122,7 +124,7 @@ def test_delete_an_entry_for_user(user_schema):
 
 
 def test_update_an_entry_on_existing_key(user_schema):
-    user_schema.create(id='40', username='michael')
+    user_schema.create(id='.40', username='michael')
     user_schema.create(id='30', username='joe')
 
     resp = user_schema.update(dict(id='30'), username='michael')
@@ -295,6 +297,24 @@ def test_between_request(stats_schema):
 
     resp = stats_schema.fetch(user_id=Equal(300), day_id=Between(30, 40))
     assert len(resp.message) == 11  # 40 is included
+
+
+def test_sorting(stats_schema):
+    days = list(range(50))
+    shuffle(days)
+    for day in days:
+        metrics = int(random() * 400)
+        resp = stats_schema.create(user_id=300, day_id=day, metrics=metrics)
+
+    resp = stats_schema.fetch(user_id=Equal(300), sort=consts.SORT_DESCENDING)
+    start = 49
+    for i in range(50):
+        assert resp.message[i].get('day_id') == start
+        start = start - 1
+
+    resp = stats_schema.fetch(user_id=Equal(300), sort=consts.SORT_ASCENDING)
+    for i in range(50):
+        assert resp.message[i].get('day_id') == i
 
 
 def test_dynamo_table_creation(table_name):
