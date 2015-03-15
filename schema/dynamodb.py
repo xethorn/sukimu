@@ -3,6 +3,7 @@
 
 from boto.dynamodb2 import table
 
+from schema import consts
 from schema import operations
 from schema import response
 from schema import schema
@@ -96,7 +97,7 @@ class TableDynamo(schema.Table):
             status=response.Status.OK if deleted else response.Status.ERROR,
             message=None)
 
-    def fetch(self, query, limit=None):
+    def fetch(self, query, sort=None, limit=None):
         """Fetch one or more entries.
 
         Fetching entries is allowed on any field. For better performance, it is
@@ -104,7 +105,8 @@ class TableDynamo(schema.Table):
         be performed on the table (which are much slower.)
 
         Args:
-            query (dict): The query.
+            query (dict): the query.
+            sort (int): the sorting type (refer to schema.sort).
             limit (int): the number of items you want to get back from the
                 table.
         Return:
@@ -129,6 +131,11 @@ class TableDynamo(schema.Table):
 
             elif isinstance(value, operations.In):
                 return self.fetch_many(key, value.value)
+
+        if sort is consts.SORT_DESCENDING:
+            data['reverse'] = True
+        else:
+            data['reverse'] = False
 
         if index:
             if index.name:
