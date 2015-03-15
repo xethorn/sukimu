@@ -21,6 +21,7 @@ class TableDynamo(schema.Table):
         self.name = name
         self.connection = connection
         self.table = table.Table(name, connection=connection)
+        self.table.use_boolean()  # This allows to use boolean values.
         self.indexes = {}
         self.hash = None
         self.range = None
