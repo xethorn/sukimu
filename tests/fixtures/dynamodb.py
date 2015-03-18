@@ -2,7 +2,7 @@ import atexit
 import time
 
 from boto.dynamodb2.layer1 import DynamoDBConnection
-from schema.dynamodb import TableDynamo
+from sukimu.dynamodb import TableDynamo
 
 
 connection = DynamoDBConnection(

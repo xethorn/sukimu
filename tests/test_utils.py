@@ -1,4 +1,4 @@
-from schema import utils
+from sukimu import utils
 
 
 def test_key_dict():

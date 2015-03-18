@@ -7,7 +7,7 @@ first if the value is required, if the type is correct then it invokes any
 additional validators.
 """
 
-from schema import exceptions
+from sukimu import exceptions
 
 
 class Field():

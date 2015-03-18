@@ -1,8 +1,8 @@
 from unittest import mock
 import pytest
 
-from schema import exceptions
-from schema import fields
+from sukimu import exceptions
+from sukimu import fields
 
 
 def test_field_creation():

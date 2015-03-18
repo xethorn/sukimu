@@ -1,7 +1,7 @@
 import pytest
 
-from schema import response
-from schema import exceptions
+from sukimu import response
+from sukimu import exceptions
 
 
 def test_response_creation():

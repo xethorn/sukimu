@@ -80,10 +80,10 @@ from collections import namedtuple
 from copy import deepcopy
 from threading import Thread
 
-from schema import exceptions
-from schema import operations
-from schema import response
-from schema import utils
+from sukimu import exceptions
+from sukimu import operations
+from sukimu import response
+from sukimu import utils
 
 
 class Schema():

@@ -1,4 +1,4 @@
-Schema
+Sukimu
 ======
 
 * Licence: `MIT`

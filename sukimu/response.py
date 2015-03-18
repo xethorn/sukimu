@@ -1,4 +1,4 @@
-from schema import exceptions
+from sukimu import exceptions
 
 
 class Status():

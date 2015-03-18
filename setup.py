@@ -3,11 +3,11 @@ from setuptools import setup
 
 
 setup(
-    name='Schema',
+    name='Sukimu',
     version='0.0.1a1',
-    url='https://github.com/xethorn/schema',
+    url='https://github.com/xethorn/sukimu',
     author='Michael Ortali',
-    author_email='hello@xethorn.net',
+    author_email='github@xethorn.net',
     description=(
         'Standardized way to perform CRUD operations with Field validation'),
     license='MIT',
@@ -17,5 +17,4 @@ setup(
     classifiers=[
         'Development Status :: Alpha',
         'Programming Language :: Python :: 3.4',
-    ],
-)
+    ],)
