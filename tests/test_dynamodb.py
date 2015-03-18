@@ -4,17 +4,17 @@ import uuid
 from random import random
 from random import shuffle
 
-from schema import consts
-from schema import exceptions
-from schema import response
-from schema.dynamodb import IndexDynamo
-from schema.dynamodb import IndexDynamo
-from schema.dynamodb import TableDynamo
-from schema.fields import Field
-from schema.operations import Between
-from schema.operations import Equal
-from schema.operations import In
-from schema.schema import Schema, Index
+from sukimu import consts
+from sukimu import exceptions
+from sukimu import response
+from sukimu.dynamodb import IndexDynamo
+from sukimu.dynamodb import IndexDynamo
+from sukimu.dynamodb import TableDynamo
+from sukimu.fields import Field
+from sukimu.operations import Between
+from sukimu.operations import Equal
+from sukimu.operations import In
+from sukimu.schema import Schema, Index
 from tests.fixtures import dynamodb
 
 

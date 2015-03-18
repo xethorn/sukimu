@@ -1,10 +1,10 @@
 from unittest import mock
 import pytest
 
-from schema import fields
-from schema import operations
-from schema import response
-from schema import schema
+from sukimu import fields
+from sukimu import operations
+from sukimu import response
+from sukimu import schema
 
 
 def create_schema(fields=None, indexes=None):

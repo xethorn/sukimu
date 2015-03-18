@@ -3,10 +3,10 @@
 
 from boto.dynamodb2 import table
 
-from schema import consts
-from schema import operations
-from schema import response
-from schema import schema
+from sukimu import consts
+from sukimu import operations
+from sukimu import response
+from sukimu import schema
 
 
 class TableDynamo(schema.Table):
