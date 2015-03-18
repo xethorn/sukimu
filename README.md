@@ -1,7 +1,8 @@
 Sukimu
 ======
 
-* Licence: `MIT`
+[![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
+[![Build status](https://travis-ci.org/xethorn/sukimu.svg?branch=master)](https://travis-ci.org/xethorn/sukimu/)
 
 Schemas define the structure of the fields of your table. The schema handles
 fields validations, and ensure index unicity. There are 5 main concepts around
@@ -53,4 +54,5 @@ key into ```username__eq``` in dynamodb.
 
 Author
 ======
+
 * Michael Ortali ([@xethorn](https://github.com/xethorn))
