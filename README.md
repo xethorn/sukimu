@@ -4,55 +4,233 @@ Sukimu
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 [![Build status](https://travis-ci.org/xethorn/sukimu.svg?branch=master)](https://travis-ci.org/xethorn/sukimu/)
 
-Schemas define the structure of the fields of your table. The schema handles
-fields validations, and ensure index unicity. There are 5 main concepts around
-the schemas:
+A pythonic interface for nosql databases (supports DynamoDb.)
 
-**Indexes**
+Sukimu provides a standard way to write your table schema (fields, validators,
+indexes) and perform CRUD operations. This framework also offers model
+extensions, and field pickling for any read operations.
+
+
+## Installation
+
+Using pypi:
+
+```bash
+pip install sukimu
+```
+
+Using git:
+```bash
+pip install git+https://github.com/xethorn/sukimu.git#egg=sukimu
+```
+
+
+## Basic usage
+
+When building a new project from scratch, you often need a user table. For this
+specific table, we have the following rules:
+
+* A unique id: id used across our codebase to identify the content that is
+  owned by the user.
+* Username: chain of characters that identify the user.
+* Password: encrypted field.
+* Full name: nice to have but not required.
+* Active: if the account is active or not.
+
+```python
+# If you don't have dynamodb set, you can use a local dynamodb
+from boto.dynamodb2.layer1 import DynamoDBConnection
+
+from sukimu.dynamodb import TableDynamo, IndexDynamo
+from sukimu.fields import Field
+from sukimu.schema import Schema
+
+
+connection = DynamoDBConnection(
+    host='localhost', port='3333', aws_secret_access_key='foo',
+    aws_access_key_id='bar', is_secure=False)
+
+
+UserModel = Schema(
+    TableDynamo('user', connection),
+
+    IndexDynamo(
+        Index.PRIMARY, 'id', read_capacity=1, write_capacity=1),
+
+    IndexDynamo(
+        Index.GLOBAL, 'username', name='username_index',
+        read_capacity=1, write_capacity=1),
+
+    id=Field(fields.id),
+
+    # Login information
+    username=Field(validator.username, required=True),
+    password=Field(validator.password, required=True),
+
+    # User personal informations
+    full_name=Field(),
+    active=Field(basetype=boolean))
+```
+
+If your table is not yet in DynamoDb, you can create it by running:
+
+```python
+UserModel.table.create_table()
+```
+
+## Indexes
 
 An index defines which key (or set of keys) should be unique within your table.
-The schema will perform checks on those indexes whenever a row is being created
-or updated.
+The schema will perform checks on those indexes whenever an entry is being
+created or updated.
 
 Some examples:
 
-1. If you have a user table, and need usernames and emails to be unique, you
-   will have then 2 indexes.
-2. If you have a session token table with a user id and a token number, you can
-   have one index composed of two keys: user id (hash) and token number (range)
+* If you have a user table, and need usernames and emails to be unique, you
+  will have then 2 indexes.
+* If you have a session token table with a user id and a token number, you can
+  have one index composed of two keys: user id (hash) and token number (range)
 
-**Validators**
+### DynamoDb indexes
 
-Validators are health checks on the provided data. For example: if you have a
-field `age`, the field is most likely going to have a defined range (minimum
-and maximum). If a value provided is not valid, the field validator throws an
-exception, caught by the schema, and returned as part of the response (so if
-more than one field is invalid, the user can be informed.)
+DynamoDb indexes provides additional features such as the ability to set the
+throughput (read and write capacity.) In addition, Global Indexes do not
+require the combinaison (hash - range) to be unique, to enable this, you can
+use `unique=False`.
 
-**Extensions**
+## Operations
 
-Extensions are only available for `fetch` and `fetch_one` method. They are
-populating more fields on the returned object.
+### Basics
 
-For instance: if you have a user table, and a profile table, you probably want
-the user to be able to get the profile as part of the same response. So
-`profile` can be an extension of user.
+The table is abstracted in a way that you can run any operations:
 
-**Generated fields**
+* `fetch`: fetch one or more entries based on the attributes.
+* `fetch_one`: find one entry that matches the requirements.
+* `create`: add a new entry (sukimu ensures index unicity.)
+* `delete`: remove an entry.
+* `update`: update an entry.
 
-Generated fields are created after field validation. For instance: on a blog
-post, you want to capture the number of words, it could be a generated field.
-Those fields are saved into the database.
+Example:
 
-**Operations**
+```python
+from sukimu.operations import Equal
 
-Field operations are used for two things: the first is to validate all the
-possible value this operation contains (by using the field itself) and the
-second is to write the correct query. For example:
-``fetch_one(username=Equal('michael'))``, will convert the
-key into ```username__eq``` in dynamodb.
+resp = UserModel.create(id='1a872nd', username='celine')
+assert resp.success
 
-Author
-======
+resp = UserModel.fetch_one(username=Equal('celine'))
+assert resp.username == 'celine'
 
-* Michael Ortali ([@xethorn](https://github.com/xethorn))
+# See Validators section for more details.
+resp = UserModel.update(dict(id='1a872nd'), username='new$username')
+print(resp.errors) # an error will show on the `$`
+
+resp = UserModel.update(dict(id='1a872nd'), username='NewUsername')
+assert resp.username == 'newusername'
+
+resp = UserModel.fetch_one(id=Equal('1a872nd'))
+assert resp.username == 'newusername'
+```
+
+### Response format
+
+Sukimu provides a response envelope that aims to help understand the type of
+data being returned:
+
+* `response.message`: If the operation was successful, this attributes contains
+  the data.
+* `response.errors`: Instead of showing one error at a time, all the errors
+  detected during the validation populate this attribute.
+* `response.status`: similar to http status codes. For example: fetching data
+  that does not exist returns a 404.
+
+
+## Validators
+
+Validators are health checks on the provided data.
+
+For example: if you have a field `age`, the field is most likely going to have
+a defined range (minimum and maximum). If a value provided is not valid, the
+field validator throws an exception, caught by the schema, and returned as part
+of the response (so if more than one field is invalid, the user can be
+informed.)
+
+```python
+from schema import exceptions
+
+
+USERNAME_FORMAT = re.compile('^[a-z\-\d]+$')
+
+def username(value):
+    """Username validation.
+
+    Args:
+        value (str): the username.
+    Return:
+        str: All usernames should be lowercase.
+    """
+
+    if not value or len(value) > 20:
+        raise exceptions.FieldException(
+            'Username should be less than 20 characters.')
+
+    if not len(value) > 3:
+        raise exceptions.FieldException(
+            'Username should contain more than 3 characters.')
+
+    if not USERNAME_FORMAT.match(value):
+        raise exceptions.FieldException(
+            'Usernames can only have letters and digits.')
+
+    return value.lower()
+```
+
+Chaining validators is possible and it happens on the schema:
+
+```python
+UserSchema = Schema(
+    ...
+    username=Field(
+        validator.username,
+        validator.lowercase,
+        required=True)
+    ...
+    )
+```
+
+
+## Extensions
+
+Extensions are additional data that can be fetched on demand.
+
+The use case for extension is very similar to a `join`. It allows you to fetch
+from any source additional data, and this data will be appended to your object.
+
+Fields are only available for `fetch` and `fetch_one` methods.
+
+```python
+from sukimu.operations import Equal
+
+@UserModel.extension('stats')
+def stats(item, fields):
+    # You will observe here that fields is an array that contains
+    # 'source.url' and 'user.id'.
+    return {'days': 10, 'additional_fields': fields}
+
+
+@UserModel.extension('history')
+def history(item, fields):
+    return {'length': 20}
+
+
+UserModel.create(id='random', username='michael')
+resp = UserModel.fetch(
+    username=Equal('michael'),
+    fields=[
+        'history',
+        'stats.days',
+        'stats.source.url',
+        'stats.user.id'])
+
+print(resp.message)
+```
