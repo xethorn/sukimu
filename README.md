@@ -42,7 +42,7 @@ from boto.dynamodb2.layer1 import DynamoDBConnection
 
 from sukimu.dynamodb import TableDynamo, IndexDynamo
 from sukimu.fields import Field
-from sukimu.schema import Schema
+from sukimu.schema import Schema, Index
 
 
 connection = DynamoDBConnection(
@@ -60,7 +60,7 @@ UserModel = Schema(
         Index.GLOBAL, 'username', name='username_index',
         read_capacity=1, write_capacity=1),
 
-    id=Field(fields.id),
+    id=Field(validator.id),
 
     # Login information
     username=Field(validator.username, required=True),
