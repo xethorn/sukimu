@@ -234,3 +234,7 @@ resp = UserModel.fetch(
 
 print(resp.message)
 ```
+
+## Author
+
+* Michael Ortali ([@xethorn](http://twitter.com/xethorn))
