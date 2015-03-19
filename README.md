@@ -10,7 +10,6 @@ Sukimu provides a standard way to write your table schema (fields, validators,
 indexes) and perform CRUD operations. This framework also offers model
 extensions, and field pickling for any read operations.
 
-
 ## Installation
 
 Using pypi:
@@ -30,12 +29,12 @@ pip install git+https://github.com/xethorn/sukimu.git#egg=sukimu
 When building a new project from scratch, you often need a user table. For this
 specific table, we have the following rules:
 
-* A unique id: id used across our codebase to identify the content that is
+* `id`: this unique id used across our codebase to identify the content that is
   owned by the user.
-* Username: chain of characters that identify the user.
-* Password: encrypted field.
-* Full name: nice to have but not required.
-* Active: if the account is active or not.
+* `username`: chain of characters that identify the user.
+* `password`: encrypted field.
+* `full_name`: nice to have but not required.
+* `active`: if the account is active or not.
 
 ```python
 # If you don't have dynamodb set, you can use a local dynamodb
@@ -87,16 +86,14 @@ created or updated.
 Some examples:
 
 * If you have a user table, and need usernames and emails to be unique, you
-  will have then 2 indexes.
+  will have then at least 2 indexes.
 * If you have a session token table with a user id and a token number, you can
   have one index composed of two keys: user id (hash) and token number (range)
 
-### DynamoDb indexes
-
-DynamoDb indexes provides additional features such as the ability to set the
-throughput (read and write capacity.) In addition, Global Indexes do not
-require the combinaison (hash - range) to be unique, to enable this, you can
-use `unique=False`.
+**Note about DynamoDb Indexes:** DynamoDb indexes provides additional features
+such as the ability to set the throughput (read and write capacity.) In
+addition, Global Indexes do not require the combinaison (hash - range) to be
+unique, to enable this, set the flag `unique=False`.
 
 ## Operations
 
@@ -104,7 +101,7 @@ use `unique=False`.
 
 The table is abstracted in a way that you can run any operations:
 
-* `fetch`: fetch one or more entries based on the attributes.
+* `fetch`: fetch one or more entries.
 * `fetch_one`: find one entry that matches the requirements.
 * `create`: add a new entry (sukimu ensures index unicity.)
 * `delete`: remove an entry.
@@ -134,8 +131,8 @@ assert resp.username == 'newusername'
 
 ### Response format
 
-Sukimu provides a response envelope that aims to help understand the type of
-data being returned:
+Sukimu provides a response envelope that aims to help consumers understand the 
+type of data being returned:
 
 * `response.message`: If the operation was successful, this attributes contains
   the data.
