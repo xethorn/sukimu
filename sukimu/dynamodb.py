@@ -133,14 +133,11 @@ class TableDynamo(schema.Table):
             elif isinstance(value, operations.In):
                 return self.fetch_many(key, value.value)
 
-        if sort is consts.SORT_DESCENDING:
-            data['reverse'] = True
-        else:
-            data['reverse'] = False
-
         if index:
             if index.name:
                 data['index'] = index.name
+                
+            data['reverse'] = sort is consts.SORT_DESCENDING
             dynamo = list(self.table.query_2(**data))
         else:
             dynamo = list(self.table.scan(**data))
