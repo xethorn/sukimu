@@ -3,6 +3,7 @@ Sukimu
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org)
 [![Build status](https://travis-ci.org/xethorn/sukimu.svg?branch=master)](https://travis-ci.org/xethorn/sukimu/)
+[![Coverage Status](https://coveralls.io/repos/xethorn/sukimu/badge.svg?branch=master)](https://coveralls.io/r/xethorn/sukimu?branch=master)
 
 A pythonic interface for nosql databases (supports DynamoDb.)
 
