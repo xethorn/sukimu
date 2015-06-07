@@ -49,6 +49,12 @@ class TableDynamo(schema.Table):
             self.hash = index.hash
             self.range = index.range
 
+        keys = index.keys
+        self.indexes.setdefault(keys[0], []).append(index)
+
+        if len(keys) > 1:
+            self.indexes.setdefault('-'.join(keys), []).append(index)
+
     def create(self, data):
         """Create an item.
 
@@ -136,7 +142,7 @@ class TableDynamo(schema.Table):
         if index:
             if index.name:
                 data['index'] = index.name
-                
+
             data['reverse'] = sort is consts.SORT_DESCENDING
             dynamo = list(self.table.query_2(**data))
         else:
