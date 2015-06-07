@@ -74,6 +74,20 @@ def stats_schema():
     return schema
 
 
+@pytest.fixture
+def stats_reverse_schema():
+    schema = Schema(
+        TableDynamo(table_name(), dynamodb.connection),
+        IndexDynamo(Index.PRIMARY, 'user_id', 'day_id',
+                    read_capacity=8, write_capacity=2),
+        IndexDynamo(Index.GLOBAL, 'day_id', 'user_id',
+                    name='day-id-user-id', read_capacity=8, write_capacity=2),
+        user_id=Field(basetype=int),
+        day_id=Field(basetype=int))
+    schema.table.create_table()
+    return schema
+
+
 def test_can_create_fixtures(user_schema, thread_schema):
     pass
 
@@ -315,6 +329,30 @@ def test_sorting(stats_schema):
     resp = stats_schema.fetch(user_id=Equal(300), sort=consts.SORT_ASCENDING)
     for i in range(50):
         assert resp.message[i].get('day_id') == i
+
+
+def test_reverse_schema(stats_reverse_schema):
+    days = list(range(50))
+    shuffle(days)
+    total_reverse = 0
+    for day in days:
+        metrics = int(random() * 400)
+        stats_reverse_schema.create(
+            user_id=300, day_id=day, metrics=metrics)
+
+        if not day % 2:
+            total_reverse += 1
+            stats_reverse_schema.create(
+                user_id=200, day_id=day, metrics=metrics)
+
+    resp = stats_reverse_schema.fetch(user_id=Equal(300))
+    assert len(resp.message) == 50
+
+    resp = stats_reverse_schema.fetch(user_id=Equal(200))
+    assert len(resp.message) == total_reverse
+
+    resp = stats_reverse_schema.fetch(day_id=Equal(18))
+    assert len(resp.message) == 2
 
 
 def test_dynamo_table_creation(table_name):
