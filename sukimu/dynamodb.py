@@ -43,11 +43,11 @@ class TableDynamo(schema.Table):
             index (DynamoIndex): The dynamo index.
         """
 
-        super().add_index(index)
-
         if index.type == schema.Index.PRIMARY:
             self.hash = index.hash
             self.range = index.range
+
+        self.indexes.update({index.name: index})
 
     def create(self, data):
         """Create an item.
@@ -98,7 +98,7 @@ class TableDynamo(schema.Table):
             status=response.Status.OK if deleted else response.Status.ERROR,
             message=None)
 
-    def fetch(self, query, sort=None, limit=None):
+    def fetch(self, query, sort=None, limit=None, index=None):
         """Fetch one or more entries.
 
         Fetching entries is allowed on any field. For better performance, it is
@@ -110,13 +110,20 @@ class TableDynamo(schema.Table):
             sort (int): the sorting type (refer to schema.sort).
             limit (int): the number of items you want to get back from the
                 table.
+            index (str): the name of the index to used. If defined, looking for
+                it.
         Return:
             List: All the fetched items.
         """
 
         data = dict()
         keys = list(query.keys())
-        index = self.find_index(keys)
+
+        if index:
+            index = self.indexes.get(index)
+            assert index, 'The index requested was not found.'
+        else:
+            index = self.find_index(keys)
 
         if limit:
             data.update(limit=limit)
@@ -131,12 +138,14 @@ class TableDynamo(schema.Table):
                 data[key + '__between'] = value.value
 
             elif isinstance(value, operations.In):
+                if index:
+                    return self.fetch_many(key, value.value, index=index.name)
                 return self.fetch_many(key, value.value)
 
         if index:
             if index.name:
                 data['index'] = index.name
-                
+
             data['reverse'] = sort is consts.SORT_DESCENDING
             dynamo = list(self.table.query_2(**data))
         else:
@@ -151,7 +160,7 @@ class TableDynamo(schema.Table):
             status=response.Status.OK,
             message=[obj for obj in dynamo])
 
-    def fetch_many(self, key, values):
+    def fetch_many(self, key, values, index=None):
         """Fetch more than one item.
 
         Method used to fetch more than one item based on one key and many
@@ -160,12 +169,15 @@ class TableDynamo(schema.Table):
         Args:
             key (string): Name of the key.
             values (list): All the values to fetch.
+            index (str): the name of the index to used. If defined, looking for
+                it.
         """
 
         message = []
         for value in values:
             message.append(
-                self.fetch_one(**{key: operations.Equal(value)}).message)
+                self.fetch_one(
+                    index=index, **{key: operations.Equal(value)}).message)
 
         status = response.Status.OK
         if not message:
@@ -175,11 +187,14 @@ class TableDynamo(schema.Table):
             status=response.Status.OK,
             message=message)
 
-    def fetch_one(self, **query):
+    def fetch_one(self, index=None, **query):
         """Get one item.
 
         Args:
             query (dict): The query item.
+            index (str): the name of the index to used. If defined, looking for
+                it.
+
         Return:
             Response: If the item is found, it is provided in the message,
                 if not found, the status is set to NOT_FOUND.
@@ -211,7 +226,7 @@ class TableDynamo(schema.Table):
                 return default_response
 
         if not item:
-            data = self.fetch(query, limit=1).message
+            data = self.fetch(query, index=index, limit=1).message
             if data and len(data) == 1:
                 item = data[0]
 

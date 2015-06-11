@@ -420,20 +420,17 @@ class Table():
             self.add_index(index)
 
     def add_index(self, index):
-        keys = index.keys
-        keys.sort()
-        for key in keys:
-            self.indexes.setdefault(key, []).append(index)
-
-        if len(keys) > 1:
-            self.indexes.setdefault('-'.join(keys), []).append(index)
+        return NotImplemented
 
     def find_index(self, fields):
-        fields.sort()
-        key = '-'.join(fields)
-        if key in self.indexes:
-            return self.indexes.get(key)[0]
-        return
+        for index in self.indexes.values():
+            if len(fields) == 2:
+                is_hash = index.hash in (fields[0], fields[1])
+                is_range = index.range in (fields[0], fields[1])
+                if is_hash and is_range:
+                    return index
+            if len(fields) == 1 and index.hash == fields[0]:
+                return index
 
     def create(self, data):
         return NotImplemented
