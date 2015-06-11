@@ -140,7 +140,7 @@ class TableDynamo(schema.Table):
             elif isinstance(value, operations.In):
                 if index:
                     return self.fetch_many(key, value.value, index=index.name)
-                return self.fetch_many(key, value.value)
+                return self.fetch_many(key, value.value, index=index.name)
 
         if index:
             if index.name:
