@@ -423,10 +423,14 @@ class Table():
         return NotImplemented
 
     def find_index(self, fields):
-        key = '-'.join(fields)
-        if key in self.indexes:
-            return self.indexes.get(key)[0]
-        return
+        for index in self.indexes.values():
+            if len(fields) == 2:
+                is_hash = index.hash in (fields[0], fields[1])
+                is_range = index.range in (fields[0], fields[1])
+                if is_hash and is_range:
+                    return index
+            if len(fields) == 1 and index.hash == fields[0]:
+                return index
 
     def create(self, data):
         return NotImplemented
