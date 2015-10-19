@@ -389,7 +389,7 @@ class Schema():
 
         item = self.fetch_one(**source)
         if not item.success:
-            return response
+            return item
 
         return self.table.delete(item.message)
 
