@@ -3,6 +3,9 @@ python:
     - "3.4"
     - "3.3"
 
+env:
+    - BOTO_CONFIG=/tmp/nowhere
+
 before_install:
     - wget http://dynamodb-local.s3-website-us-west-2.amazonaws.com/dynamodb_local_latest.zip
     - unzip dynamodb_local_latest.zip
