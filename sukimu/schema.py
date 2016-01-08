@@ -254,7 +254,7 @@ class Schema():
             return validation_response
 
         schema_response = self.table.fetch(
-           query, sort=sort, limit=limit, index=index)
+            query, sort=sort, limit=limit, index=index)
         if schema_response.success and fields:
             self.decorate_response(schema_response, fields)
 
