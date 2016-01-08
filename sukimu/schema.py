@@ -245,7 +245,7 @@ class Schema():
             return method
         return wrapper
 
-    def fetch(self, fields=None, limit=None, sort=None, **query):
+    def fetch(self, fields=None, limit=None, sort=None, index=None, **query):
         """Query the table to find all the models that correspond to the query.
         """
 
@@ -253,7 +253,8 @@ class Schema():
         if not validation_response.success:
             return validation_response
 
-        schema_response = self.table.fetch(query, sort=sort, limit=limit)
+        schema_response = self.table.fetch(
+            query, sort=sort, limit=limit, index=index)
         if schema_response.success and fields:
             self.decorate_response(schema_response, fields)
 
