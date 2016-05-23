@@ -116,3 +116,24 @@ def test_extensions(full_schema):
         return
 
     assert full_schema.extensions.get('stats')
+
+
+def test_decorating_with_extension(full_schema):
+    """Test decorating with an extension.
+    """
+
+    spy = mock.MagicMock()
+    item = {'id': 'foo'}
+    context = {'value': 'context_value'}
+    fields = {'extension_name': ['foo']}
+    extension_name = 'extension_name'
+
+    @full_schema.extension(extension_name)
+    def stats(item, fields, context=None):
+        spy(item, fields, context)
+        return context.get('value')
+
+    response = full_schema.decorate(item, fields=fields, context=context)
+    spy.assert_called_with(item, ['foo'], context)
+    assert spy.called
+    assert response.get(extension_name) == context.get('value')
