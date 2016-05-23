@@ -245,8 +245,21 @@ class Schema():
             return method
         return wrapper
 
-    def fetch(self, fields=None, limit=None, sort=None, index=None, **query):
+    def fetch(self, fields=None, limit=None, sort=None, index=None,
+                context=None, **query):
         """Query the table to find all the models that correspond to the query.
+
+        Args:
+            fields (list): the list of fields to return on each of the items.
+            limit (int): optional limit on how many items need to be fetched.
+            sort (int): if the results should be sorted, and if so, in which
+                order.
+            index (str): name of the index to use.
+            context (dict): additional context to provide (used by extensions)
+            query (dict): fields to query on.
+
+        Return:
+            Response: the data of the request.
         """
 
         validation_response = self.validate(query, operation=operations.READ)
@@ -256,11 +269,22 @@ class Schema():
         schema_response = self.table.fetch(
             query, sort=sort, limit=limit, index=index)
         if schema_response.success and fields:
-            self.decorate_response(schema_response, fields)
+            self.decorate_response(schema_response, fields, context=context)
 
         return schema_response
 
-    def fetch_one(self, fields=None, **query):
+    def fetch_one(self, fields=None, context=None, **query):
+        """Fetch one specific item.
+
+        Args:
+            fields (list): the list of fields to return on the item.
+            query (dict): the request fields to search on.
+            context (dict): optional context (used by extensions).
+
+        Return:
+            Response: the data from the request.
+        """
+
         validation_response = self.validate(query, operation=operations.READ)
 
         if not validation_response.success:
@@ -268,17 +292,21 @@ class Schema():
 
         schema_response = self.table.fetch_one(**query)
         if schema_response.success and fields:
-            self.decorate_response(schema_response, fields)
+            self.decorate_response(schema_response, fields, context=context)
 
         return schema_response
 
-    def decorate_response(self, response, fields):
+    def decorate_response(self, response, fields, context=None):
         """Decorate a response.
 
         Args:
             item (dict): The current item.
             fields (dict): The fields that are need to be provided to the main
                 item.
+            context (dict): Additional context to provide to each extension.
+
+        Return:
+            Response: the decorated response.
         """
 
         if (isinstance(fields, list) or isinstance(fields, tuple) or
@@ -287,12 +315,13 @@ class Schema():
 
         data = response.message
         if isinstance(data, list):
-            data = [self.decorate(dict(item), fields) for item in data]
+            data = [
+                self.decorate(dict(item), fields, context) for item in data]
         else:
-            data = self.decorate(dict(data), fields)
+            data = self.decorate(dict(data), fields, context)
         response.message = data
 
-    def decorate(self, item, fields):
+    def decorate(self, item, fields, context=None):
         """Decorate an item with more fields.
 
         Decoration means that some fields are going to be added to the initial
@@ -307,19 +336,28 @@ class Schema():
             item (dict): The current item.
             fields (dict): The fields that are need to be provided to the main
                 item.
+            context (dict): Additional context to provide to each extension.
+
+        Return:
+            Response: the decorated response.
         """
 
-        def activate_extension(field, item):
+        def activate_extension(field, item, context=None):
             extension = self.extensions.get(field)
-            if extension:
-                item.update({field: extension(item, fields.get(field))})
-            return
+            if not extension:
+                return
+
+            kwargs = {}
+            if 'context' in extension.__code__.co_varnames:
+                kwargs.update(context=context)
+            item.update({field: extension(item, fields.get(field), **kwargs)})
 
         table_fields = fields.pop(self.table.name, -1)
 
         threads = []
         for field in fields:
-            thread = Thread(target=activate_extension, args=(field, item))
+            thread = Thread(
+                target=activate_extension, args=(field, item, context))
             thread.start()
             threads.append(thread)
 
