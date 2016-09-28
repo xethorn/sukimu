@@ -114,25 +114,25 @@ Example:
 from sukimu.operations import Equal
 
 resp = UserModel.create(id='1a872nd', username='celine')
-assert resp.success
+assert resp
 
 resp = UserModel.fetch_one(username=Equal('celine'))
-assert resp.username == 'celine'
+assert resp.message.get('username') == 'celine'
 
 # See Validators section for more details.
 resp = UserModel.update(dict(id='1a872nd'), username='new$username')
 print(resp.errors) # an error will show on the `$`
 
 resp = UserModel.update(dict(id='1a872nd'), username='NewUsername')
-assert resp.username == 'newusername'
+assert resp.message.get('username') == 'newusername'
 
 resp = UserModel.fetch_one(id=Equal('1a872nd'))
-assert resp.username == 'newusername'
+assert resp.message.get('username') == 'newusername'
 ```
 
 ### Response format
 
-Sukimu provides a response envelope that aims to help consumers understand the 
+Sukimu provides a response envelope that aims to help consumers understand the
 type of data being returned:
 
 * `response.message`: If the operation was successful, this attributes contains
