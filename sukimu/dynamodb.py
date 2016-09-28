@@ -2,10 +2,11 @@
 """
 
 from boto.dynamodb2 import table
+from oto import response
+from oto import status
 
 from sukimu import consts
 from sukimu import operations
-from sukimu import response
 from sukimu import schema
 
 
@@ -72,7 +73,7 @@ class TableDynamo(schema.Table):
             Response: The response of the update.
         """
 
-        if not item.success:
+        if not item:
             return item
 
         item = item.message
@@ -81,7 +82,7 @@ class TableDynamo(schema.Table):
 
         save = item.partial_save()
         return response.Response(
-            status=response.Status.OK if save else response.Status.ERROR,
+            status=status.OK if save else status.ACCEPTED,
             message=item)
 
     def delete(self, item):
@@ -95,8 +96,7 @@ class TableDynamo(schema.Table):
 
         deleted = item.delete()
         return response.Response(
-            status=response.Status.OK if deleted else response.Status.ERROR,
-            message=None)
+            status=status.OK if deleted else status.BAD_REQUEST)
 
     def fetch(self, query, sort=None, limit=None, index=None):
         """Fetch one or more entries.
@@ -153,11 +153,10 @@ class TableDynamo(schema.Table):
 
         if not len(dynamo):
             return response.Response(
-                status=response.Status.NOT_FOUND,
+                status=status.NOT_FOUND,
                 message=[])
 
         return response.Response(
-            status=response.Status.OK,
             message=[obj for obj in dynamo])
 
     def fetch_many(self, key, values, index=None):
@@ -179,13 +178,11 @@ class TableDynamo(schema.Table):
                 self.fetch_one(
                     index=index, **{key: operations.Equal(value)}).message)
 
-        status = response.Status.OK
+        data_status = status.OK
         if not message:
-            status = response.Status.NOT_FOUND
+            data_status = status.NOT_FOUND
 
-        return response.Response(
-            status=response.Status.OK,
-            message=message)
+        return response.Response(status=data_status, message=message)
 
     def fetch_one(self, index=None, **query):
         """Get one item.
@@ -200,9 +197,7 @@ class TableDynamo(schema.Table):
                 if not found, the status is set to NOT_FOUND.
         """
 
-        default_response = response.Response(
-            status=response.Status.NOT_FOUND,
-            message=None)
+        default_response = response.Response(status=status.NOT_FOUND)
         field_names = list(query.keys())
 
         required = 1
@@ -231,9 +226,7 @@ class TableDynamo(schema.Table):
                 item = data[0]
 
         if item:
-            return response.Response(
-                status=response.Status.OK,
-                message=item)
+            return response.Response(message=item)
 
         return default_response
 

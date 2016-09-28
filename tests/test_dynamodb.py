@@ -4,9 +4,11 @@ import uuid
 from random import random
 from random import shuffle
 
+from oto import response
+from oto import status
+
 from sukimu import consts
 from sukimu import exceptions
-from sukimu import response
 from sukimu.dynamodb import IndexDynamo
 from sukimu.dynamodb import IndexDynamo
 from sukimu.dynamodb import TableDynamo
@@ -94,13 +96,14 @@ def test_can_create_fixtures(user_schema, thread_schema):
 
 def test_create_an_entry_with_wrong_field(user_schema):
     resp = user_schema.create(id='30', username='michael', random_field='test')
-    assert not resp.success
+    assert not resp
     assert isinstance(
-        resp.errors.get('random_field'), exceptions.FieldException)
+        resp.errors.get('message').get('random_field'),
+        exceptions.FieldException)
 
     resp = user_schema.fetch_one(id=Equal('30'))
-    assert not resp.success
-    assert resp.status is response.Status.NOT_FOUND
+    assert not resp
+    assert resp.status is status.NOT_FOUND
 
 
 def test_extension(user_schema):
@@ -115,15 +118,15 @@ def test_extension(user_schema):
 
 def test_create_an_entry_for_user(user_schema):
     resp = user_schema.create(id='30', username='michael')
-    assert resp.success
+    assert resp
 
 
 def test_update_an_entry_for_user(user_schema):
     resp = user_schema.create(id='30', username='michael')
-    assert resp.success
+    assert resp
 
     resp = user_schema.update(dict(id='30'), username='joe')
-    assert resp.success
+    assert resp
 
 
 def test_delete_an_entry_for_user(user_schema):
@@ -131,10 +134,10 @@ def test_delete_an_entry_for_user(user_schema):
     user_schema.create(id='40', username='michael2')
 
     resp = user_schema.delete(id=Equal('30'))
-    assert resp.success
+    assert resp
 
     resp = user_schema.fetch_one(id=Equal(30))
-    assert not resp.success
+    assert not resp
 
 
 def test_update_an_entry_on_existing_key(user_schema):
@@ -142,22 +145,24 @@ def test_update_an_entry_on_existing_key(user_schema):
     user_schema.create(id='30', username='joe')
 
     resp = user_schema.update(dict(id='30'), username='michael')
-    assert not resp.success
-    assert isinstance(resp.errors.get('username'), exceptions.FieldException)
+    assert not resp
+    assert isinstance(
+        resp.errors.get('message').get('username'), exceptions.FieldException)
 
     resp = user_schema.fetch_one(id=Equal('30'))
-    assert resp.username == 'joe'
+    assert resp.message.get('username') == 'joe'
 
 
 def test_create_an_entry_on_existing_user_id(user_schema):
     resp = user_schema.create(id='30', username='michael')
-    assert resp.success
+    assert resp
 
     resp = user_schema.create(id='30', username='otherusername')
-    assert not resp.success
-    assert not resp.errors.get('username')
-    assert resp.status is response.Status.FIELD_VALUE_ALREADY_USED
-    assert isinstance(resp.errors.get('id'), exceptions.FieldException)
+    assert not resp
+    assert not resp.errors.get('message').get('username')
+    assert resp.errors.get('code') is consts.ERROR_CODE_DUPLICATE_KEY
+    assert isinstance(
+        resp.errors.get('message').get('id'), exceptions.FieldException)
 
 
 def test_create_an_entry_with_map_data(user_schema):
@@ -168,70 +173,72 @@ def test_create_an_entry_with_map_data(user_schema):
             key1='value',
             key2=dict(
                 key1='value')))
-    assert resp.success
+    assert resp
 
     resp = user_schema.fetch_one(id=Equal('190'))
-    assert resp.success
+    assert resp
     assert isinstance(resp.message.get('map_field'), dict)
 
 
 def test_create_an_entry_on_existing_user_username(user_schema):
     resp = user_schema.create(id='30', username='michael')
-    assert resp.success
+    assert resp
 
     resp = user_schema.create(id='20', username='michael')
-    assert not resp.success
-    assert not resp.errors.get('id')
-    assert resp.status is response.Status.FIELD_VALUE_ALREADY_USED
-    assert isinstance(resp.errors.get('username'), exceptions.FieldException)
+    assert not resp
+    assert not resp.errors.get('message').get('id')
+    assert resp.errors.get('code') is consts.ERROR_CODE_DUPLICATE_KEY
+    assert isinstance(
+        resp.errors.get('message').get('username'), exceptions.FieldException)
 
 
 def test_create_an_entry_on_existing_user_username_and_id(user_schema):
     resp = user_schema.create(id='30', username='michael')
-    assert resp.success
+    assert resp
 
     resp = user_schema.create(id='20', username='michael')
-    assert not resp.success
-    assert not resp.errors.get('id')
-    assert resp.status is response.Status.FIELD_VALUE_ALREADY_USED
-    assert isinstance(resp.errors.get('username'), exceptions.FieldException)
+    assert not resp
+    assert not resp.errors.get('message').get('id')
+    assert resp.errors.get('code') is consts.ERROR_CODE_DUPLICATE_KEY
+    assert isinstance(
+        resp.errors.get('message').get('username'), exceptions.FieldException)
 
 
 def test_thread_creation(thread_schema):
     resp = thread_schema.create(
         forum_name='News', thread_title='title', thread_author='user',
         thread_content='content')
-    assert resp.success
+    assert resp
 
     resp = thread_schema.fetch_one(
         forum_name=Equal('News'), thread_title=Equal('title'))
-    assert resp.success
-    assert resp.thread_author == 'user'
+    assert resp
+    assert resp.message.get('thread_author') == 'user'
 
     resp = thread_schema.fetch_one(
         forum_name=Equal('News'), thread_author=Equal('user'))
-    assert resp.success
-    assert resp.thread_title == 'title'
+    assert resp
+    assert resp.message.get('thread_title') == 'title'
 
     resp = thread_schema.fetch_one(
         thread_title=Equal('title'), thread_author=Equal('user'))
-    assert resp.success
-    assert resp.forum_name == 'News'
+    assert resp
+    assert resp.message.get('forum_name') == 'News'
 
     resp = thread_schema.create(
         forum_name='Updates', thread_title='Title2', thread_author='user',
         thread_content='content')
-    assert resp.success
+    assert resp
 
     resp = thread_schema.create(
         forum_name='Updates', thread_title='Title3', thread_author='user2',
         thread_content='content')
-    assert resp.success
+    assert resp
 
     resp = thread_schema.create(
         forum_name='Others', thread_title='Title', thread_author='user4',
         thread_content='foobar')
-    assert resp.success
+    assert resp
 
 
 def test_thread_creation_on_duplicate_indexes(thread_schema):
@@ -242,28 +249,28 @@ def test_thread_creation_on_duplicate_indexes(thread_schema):
     resp = thread_schema.create(
         forum_name='News', thread_title='title', thread_author='user',
         thread_content='content')
-    assert resp.success
+    assert resp
 
     resp = thread_schema.create(
         forum_name='News', thread_title='title', thread_author='user2',
         thread_content='content')
-    assert not resp.success
-    assert resp.errors.get('forum_name')
-    assert resp.errors.get('thread_title')
+    assert not resp
+    assert resp.errors.get('message').get('forum_name')
+    assert resp.errors.get('message').get('thread_title')
 
     resp = thread_schema.create(
         forum_name='News', thread_title='title2', thread_author='user',
         thread_content='content')
-    assert not resp.success
-    assert resp.errors.get('thread_author')
-    assert resp.errors.get('forum_name')
+    assert not resp
+    assert resp.errors.get('message').get('thread_author')
+    assert resp.errors.get('message').get('forum_name')
 
     resp = thread_schema.create(
         forum_name='Other', thread_title='title', thread_author='user',
         thread_content='content')
-    assert not resp.success
-    assert resp.errors.get('thread_title')
-    assert resp.errors.get('thread_author')
+    assert not resp
+    assert resp.errors.get('message').get('thread_title')
+    assert resp.errors.get('message').get('thread_author')
 
 
 def test_create_dynamo_schema(table_name):
@@ -281,16 +288,16 @@ def test_fetch_on_index(thread_schema):
     resp = thread_schema.create(
         forum_name='News', thread_title='title', thread_author='user',
         thread_content='content')
-    assert resp.success
+    assert resp
 
     resp = thread_schema.fetch(
         forum_name=Equal('News'), thread_title=Equal('title'))
-    assert resp.success
+    assert resp
     assert resp.message[0].get('thread_author') == 'user'
 
     resp = thread_schema.fetch(
         thread_title=Equal('title'), thread_author=Equal('user'))
-    assert resp.success
+    assert resp
     assert resp.message[0].get('forum_name') == 'News'
 
 
@@ -298,7 +305,7 @@ def test_fetch_many(user_schema):
     user_schema.create(id='30', username='michael1')
     user_schema.create(id='40', username='michael2')
     resp = user_schema.fetch(username=In('michael1', 'michael2'))
-    assert resp.success
+    assert resp
     assert len(resp.message) == 2
 
 
@@ -412,18 +419,18 @@ def test_extension_usage(user_schema):
         return {'length': 20}
 
     response = user_schema.create(id='testextension', username='michael')
-    assert response.success
+    assert response
 
     response = user_schema.fetch_one(
         username=Equal('michael'), fields=['stats.foobar', 'stats.tests.bar'])
-    assert response.stats.get('days') == 10
-    assert 'foobar' in response.stats.get('fields')
-    assert 'tests.bar' in response.stats.get('fields')
+    assert response.message.get('stats').get('days') == 10
+    assert 'foobar' in response.message.get('stats').get('fields')
+    assert 'tests.bar' in response.message.get('stats').get('fields')
 
     response = user_schema.fetch_one(
         username=Equal('michael'),
         fields=['history', 'stats.foobar', 'stats.tests.bar'])
-    assert response.stats.get('days') == 10
-    assert 'foobar' in response.stats.get('fields')
-    assert 'tests.bar' in response.stats.get('fields')
-    assert response.history.get('length') == 20
+    assert response.message.get('stats').get('days') == 10
+    assert 'foobar' in response.message.get('stats').get('fields')
+    assert 'tests.bar' in response.message.get('stats').get('fields')
+    assert response.message.get('history').get('length') == 20

@@ -80,9 +80,12 @@ from collections import namedtuple
 from copy import deepcopy
 from threading import Thread
 
+from oto import response
+from oto import status
+
+from sukimu import consts
 from sukimu import exceptions
 from sukimu import operations
-from sukimu import response
 from sukimu import utils
 
 
@@ -123,7 +126,7 @@ class Schema():
         items = set(values.keys())
 
         if operation is operations.READ and not values:
-            return response.create_success_response()
+            return response.Response()
 
         if operation is operations.CREATE:
             items = set(self.fields.keys())
@@ -147,14 +150,11 @@ class Schema():
                 errors[name] = e
                 status = False
 
-        status = response.Status.OK
         if errors:
-            status = response.Status.INVALID_FIELDS
+            return response.create_error_response(
+                consts.ERROR_CODE_VALIDATION, errors)
 
-        return response.Response(
-            status=status,
-            message=data,
-            errors=errors)
+        return response.Response(message=data)
 
     def ensure_indexes(self, validation_response, current=None):
         """Ensure index unicity.
@@ -176,7 +176,7 @@ class Schema():
             Response: The response
         """
 
-        if not validation_response.success:
+        if not validation_response:
             return validation_response
 
         data = validation_response.message
@@ -202,19 +202,16 @@ class Schema():
                 continue
 
             ancestor = self.fetch_one(**query)
-            if ancestor.success:
+            if ancestor:
                 if not current or dict(ancestor.message) != dict(current):
                     errors.update({
                         key: exceptions.FIELD_ALREADY_USED for key in keys})
 
-        status = response.Status.OK
         if errors:
-            status = response.Status.FIELD_VALUE_ALREADY_USED
+            return response.create_error_response(
+                consts.ERROR_CODE_DUPLICATE_KEY, errors)
 
-        return response.Response(
-            message=None,
-            status=status,
-            errors=errors)
+        return response.Response()
 
     def generated(self, **dependencies):
         """Register a generated field.
@@ -263,12 +260,12 @@ class Schema():
         """
 
         validation_response = self.validate(query, operation=operations.READ)
-        if not validation_response.success:
+        if not validation_response:
             return validation_response
 
         schema_response = self.table.fetch(
             query, sort=sort, limit=limit, index=index)
-        if schema_response.success and fields:
+        if schema_response and fields:
             self.decorate_response(schema_response, fields, context=context)
 
         return schema_response
@@ -287,11 +284,11 @@ class Schema():
 
         validation_response = self.validate(query, operation=operations.READ)
 
-        if not validation_response.success:
+        if not validation_response:
             return validation_response
 
         schema_response = self.table.fetch_one(**query)
-        if schema_response.success and fields:
+        if schema_response and fields:
             self.decorate_response(schema_response, fields, context=context)
 
         return schema_response
@@ -381,17 +378,15 @@ class Schema():
         """
 
         validation = self.validate(data, operation=operations.CREATE)
-        if not validation.success:
+        if not validation:
             return validation
 
         check = self.ensure_indexes(validation)
-        if not check.success:
+        if not check:
             return check
 
         data = self.table.create(validation.message)
-        return response.Response(
-            message=data,
-            status=response.Status.OK)
+        return response.Response(message=data)
 
     def update(self, source, **data):
         """Update the model from the data passed.
@@ -403,21 +398,20 @@ class Schema():
 
         data = utils.key_exclude(data, source.keys())
         data = self.validate(data, operation=operations.READ)
-        if not data.success:
+        if not data:
             return data
 
         # Recreate the object - check ancestors.
         current = self.fetch_one(**{
             key: operations.Equal(val) for key, val in source.items()})
-        if not current.success:
+        if not current:
             return current
 
         fields = response.Response(
-            message=dict(list(source.items()) + list(data.message.items())),
-            status=response.Status.OK)
+            message=dict(list(source.items()) + list(data.message.items())))
 
         ancestors = self.ensure_indexes(fields, current.message)
-        if not ancestors.success:
+        if not ancestors:
             return ancestors
 
         return self.table.update(current, fields.message)
@@ -427,7 +421,7 @@ class Schema():
         """
 
         item = self.fetch_one(**source)
-        if not item.success:
+        if not item:
             return item
 
         return self.table.delete(item.message)

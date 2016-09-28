@@ -1,9 +1,11 @@
 from unittest import mock
 import pytest
 
+from oto import response
+from oto import status
+
 from sukimu import fields
 from sukimu import operations
-from sukimu import response
 from sukimu import schema
 
 
@@ -49,15 +51,15 @@ def test_field_validation_on_create():
         s.validate({})
 
     resp = s.validate({'id': 'test'}, operations.CREATE)
-    assert resp.status is response.Status.INVALID_FIELDS
-    assert resp.errors.get('username')
-    assert not resp.errors.get('id')
+    assert resp.status is status.BAD_REQUEST
+    assert resp.errors.get('message').get('username')
+    assert not resp.errors.get('message').get('id')
 
     resp = s.validate({'username': 'test'}, operations.CREATE)
-    assert resp.status is response.Status.OK
+    assert resp.status is status.OK
 
     resp = s.validate({}, operations.READ)
-    assert resp.status is response.Status.OK
+    assert resp.status is status.OK
 
 
 def test_field_validation_on_read():
@@ -67,7 +69,7 @@ def test_field_validation_on_read():
 
     resp = s.validate(
         {'username': 'foo', 'unknownfield': 'value'}, operations.READ)
-    assert resp.status is response.Status.OK
+    assert resp.status is status.OK
     assert not resp.message.get('unknownfield')
 
     # Fields to validate should be a dictionary of format:
@@ -92,22 +94,22 @@ def test_ensure_index(monkeypatch, full_schema):
     with pytest.raises(Exception):
         full_schema.ensure_indexes(object())
 
-    error_response = response.create_error_response()
+    error_response = response.Response(status=status.BAD_REQUEST)
     assert full_schema.ensure_indexes(error_response) is error_response
 
     data = dict(id='id-value', username='username-value')
     fetch_one = mock.MagicMock(return_value=error_response)
-    success_response = response.create_success_response(data)
+    success_response = response.Response(data)
     monkeypatch.setattr(full_schema, 'fetch_one', fetch_one)
 
     resp = full_schema.ensure_indexes(success_response)
-    assert resp.success
+    assert resp
 
     fetch_one.return_value = success_response
     resp = full_schema.ensure_indexes(success_response)
-    assert not resp.success
-    assert 'id' in resp.errors
-    assert 'username' in resp.errors
+    assert not resp
+    assert 'id' in resp.errors.get('message')
+    assert 'username' in resp.errors.get('message')
 
 
 def test_extensions(full_schema):
