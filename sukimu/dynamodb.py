@@ -152,9 +152,7 @@ class TableDynamo(schema.Table):
             dynamo = list(self.table.scan(**data))
 
         if not len(dynamo):
-            return response.Response(
-                status=status.NOT_FOUND,
-                message=[])
+            return response.create_not_found_response()
 
         return response.Response(
             message=[obj for obj in dynamo])
@@ -178,11 +176,10 @@ class TableDynamo(schema.Table):
                 self.fetch_one(
                     index=index, **{key: operations.Equal(value)}).message)
 
-        data_status = status.OK
         if not message:
-            data_status = status.NOT_FOUND
+            return response.create_not_found_response()
 
-        return response.Response(status=data_status, message=message)
+        return response.Response(message)
 
     def fetch_one(self, index=None, **query):
         """Get one item.
@@ -197,7 +194,7 @@ class TableDynamo(schema.Table):
                 if not found, the status is set to NOT_FOUND.
         """
 
-        default_response = response.Response(status=status.NOT_FOUND)
+        default_response = response.create_not_found_response()
         field_names = list(query.keys())
 
         required = 1
