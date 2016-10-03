@@ -97,9 +97,7 @@ def test_can_create_fixtures(user_schema, thread_schema):
 def test_create_an_entry_with_wrong_field(user_schema):
     resp = user_schema.create(id='30', username='michael', random_field='test')
     assert not resp
-    assert isinstance(
-        resp.errors.get('message').get('random_field'),
-        exceptions.FieldException)
+    assert isinstance(resp.errors.get('message').get('random_field'), str)
 
     resp = user_schema.fetch_one(id=Equal('30'))
     assert not resp

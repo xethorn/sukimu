@@ -147,7 +147,7 @@ class Schema():
                 data[name] = field.validate(value)
 
             except exceptions.FieldException as e:
-                errors[name] = e
+                errors[name] = e.args[0]
                 status = False
 
         if errors:
