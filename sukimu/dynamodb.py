@@ -1,7 +1,7 @@
 """Adaptor for DynamoDB.
 """
 
-from boto.dynamodb2 import table
+from boto3.dynamodb import conditions
 from oto import response
 from oto import status
 
@@ -22,8 +22,7 @@ class TableDynamo(schema.Table):
 
         self.name = name
         self.connection = connection
-        self.table = table.Table(name, connection=connection)
-        self.table.use_boolean()  # This allows to use boolean values.
+        self.table = connection.Table(name)
         self.indexes = {}
         self.hash = None
         self.range = None
@@ -60,7 +59,7 @@ class TableDynamo(schema.Table):
             Dictionnary: The data that was added.
         """
 
-        self.table.put_item(data=data)
+        self.table.put_item(Item=data)
         return data
 
     def update(self, item, data):
@@ -77,13 +76,33 @@ class TableDynamo(schema.Table):
             return item
 
         item = item.message
+        update_expression = []
+        expression_attribute_values = {}
         for field, value in data.items():
-            item[field] = value
+            if field in [self.hash, self.range]:
+                continue
 
-        save = item.partial_save()
-        return response.Response(
-            status=status.OK if save else status.ACCEPTED,
-            message=item)
+            index = len(update_expression)
+            update_expression.append('{}=:v{}'.format(field, index))
+            expression_attribute_values.update({
+                ':v{}'.format(index): value
+            })
+            item.update({field: value})
+
+        item_key = {
+            index: value for index, value in {
+                self.hash: item.get(self.hash),
+                self.range: item.get(self.range)
+            }.items() if value}
+
+        if not update_expression:
+            return response.Response(status=status.OK, message=item)
+
+        self.table.update_item(
+            Key=item_key,
+            UpdateExpression='SET {}'.format(','.join(update_expression)),
+            ExpressionAttributeValues=expression_attribute_values)
+        return response.Response(status=status.ACCEPTED, message=item)
 
     def delete(self, item):
         """Delete an item.
@@ -94,9 +113,16 @@ class TableDynamo(schema.Table):
             Response: the response of the update.
         """
 
-        deleted = item.delete()
-        return response.Response(
-            status=status.OK if deleted else status.BAD_REQUEST)
+        item_key = {
+            index: value for index, value in {
+                self.hash: item.get(self.hash),
+                self.range: item.get(self.range)
+            }.items() if value}
+        try:
+            self.table.delete_item(Key=item_key)
+            return response.Response()
+        except:
+            return response.Response(status=status.BAD_REQUEST)
 
     def fetch(self, query, sort=None, limit=None, index=None):
         """Fetch one or more entries.
@@ -126,36 +152,47 @@ class TableDynamo(schema.Table):
             index = self.find_index(keys)
 
         if limit:
-            data.update(limit=limit)
+            data.update(Limit=limit)
 
+        expressions = None
         for query_segment in query.items():
             key, value = query_segment
+            expression = None
 
             if isinstance(value, operations.Equal):
-                data[key + '__eq'] = value.value
+                expression = conditions.Key(key).eq(value.value)
 
             elif isinstance(value, operations.Between):
-                data[key + '__between'] = value.value
+                expression = conditions.Key(key).between(*value.value)
 
             elif isinstance(value, operations.In):
                 if index:
                     return self.fetch_many(key, value.value, index=index.name)
                 return self.fetch_many(key, value.value, index=index.name)
 
+            if expression:
+                if not expressions:
+                    expressions = expression
+                else:
+                    expressions = expressions & expression
+
         if index:
             if index.name:
-                data['index'] = index.name
+                data['IndexName'] = index.name
 
-            data['reverse'] = sort is consts.SORT_DESCENDING
-            dynamo = list(self.table.query_2(**data))
+            data['ScanIndexForward'] = sort is not consts.SORT_DESCENDING
+            dynamo = self.table.query(
+                KeyConditionExpression=expressions,
+                **data).get('Items')
         else:
-            dynamo = list(self.table.scan(**data))
+            dynamo = self.table.scan(FilterExpression=expressions).get('Items')
 
         if not len(dynamo):
             return response.create_not_found_response()
 
         return response.Response(
-            message=[obj for obj in dynamo])
+            message=[dict(obj) for obj in dynamo])
+
 
     def fetch_many(self, key, values, index=None):
         """Fetch more than one item.
@@ -213,7 +250,7 @@ class TableDynamo(schema.Table):
                 data[self.range] = query.get(self.range).value
 
             try:
-                item = self.table.get_item(**data)
+                item = self.table.get_item(Key=data).get('Item', None)
             except:
                 return default_response
 
@@ -288,11 +325,17 @@ class TableDynamo(schema.Table):
 
             indexes.setdefault(index.type, []).append(response)
 
-        self.table.connection.create_table(
-            attributes, self.name, indexes.get(schema.Index.PRIMARY),
-            table_provision,
-            local_secondary_indexes=indexes.get(schema.Index.LOCAL, None),
-            global_secondary_indexes=indexes.get(schema.Index.GLOBAL, None))
+        self.connection.create_table(
+            TableName=self.name,
+            KeySchema=indexes.get(schema.Index.PRIMARY),
+            AttributeDefinitions=attributes,
+            ProvisionedThroughput=table_provision,
+            **{
+                index_name: index_definition
+                for index_name, index_definition in {
+                    'LocalSecondaryIndexes': indexes.get(schema.Index.LOCAL),
+                    'GlobalSecondaryIndexes': indexes.get(schema.Index.GLOBAL)
+                }.items() if index_definition})
 
 
 class IndexDynamo(schema.Index):

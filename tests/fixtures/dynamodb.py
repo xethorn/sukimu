@@ -1,29 +1,22 @@
 import atexit
-import time
 
-from boto.dynamodb2.layer1 import DynamoDBConnection
-from sukimu.dynamodb import TableDynamo
+import boto3
 
 
-connection = DynamoDBConnection(
-    host='localhost',
-    port='8000',
-    aws_secret_access_key='foo',
-    aws_access_key_id='bar',
-    is_secure=False)
+connection = boto3.resource(
+    'dynamodb', endpoint_url='http://localhost:8000', region_name='us-west-2',
+	aws_access_key_id='foo', aws_secret_access_key='foo')
 
 
 def clean():
-    while(True):
-        tables = connection.list_tables().get('TableNames')
-        if not tables:
-            return
+    tables = connection.tables.all()
+    if not tables:
+        return
 
-        for table in tables:
-            try:
-                TableDynamo(table, connection).table.delete()
-            except:
-                pass
-        time.sleep(1)
+    for table in tables:
+        try:
+            table.delete()
+        except:
+            pass
 
 atexit.register(clean)
