@@ -361,14 +361,17 @@ def test_reverse_schema(stats_reverse_schema):
 
 
 def test_dynamo_table_creation(table_name):
-    tb = Schema(
+    schema = Schema(
         TableDynamo(table_name, dynamodb.connection),
         IndexDynamo(
             Index.PRIMARY, 'id', read_capacity=8, write_capacity=4),
         id=Field())
 
-    tb.table.create_table()
-    assert table_name in dynamodb.connection.list_tables().get('TableNames')
+    table = schema.table
+    table.create_table()
+    table.table.meta.client.get_waiter('table_exists').wait(
+        TableName=table_name)
+    assert dynamodb.connection.Table(table_name).item_count is 0
 
 
 def test_dynamo_table_creation_collision(table_name):
