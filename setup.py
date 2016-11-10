@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='Sukimu',
-    version='2.0.3',
+    version='2.0.4',
     url='https://github.com/xethorn/sukimu',
     author='Michael Ortali',
     author_email='github@xethorn.net',
