@@ -95,15 +95,24 @@ class TableDynamo(schema.Table):
 
             # Consider reserved keywords
             if field.upper() in RESERVED_KEYWORDS:
-                expression_attribute_names.update({'#{}'.format(field): field})
+                field_index = len(expression_attribute_names)
+                expression_attribute_names.update({
+                    '#{}'.format(field_index): field
+                })
                 field = '#{}'.format(field)
 
             if '.' in field:
                 field_parts = field.split('.')
+                field_index = len(expression_attribute_names)
+
                 expression_attribute_names.update({
-                    '#{}'.format(name): name for name in field_parts
+                    '#{}'.format(field_index + part_index): name
+                    for part_index, name in enumerate(field_parts)
                 })
-                field = '.'.join(['#{}'.format(name) for name in field_parts])
+                field = '.'.join([
+                    '#{}'.format(field_index + part_index)
+                    for part_index, name in enumerate(field_parts)
+                ])
 
             update_expression.append('{}=:v{}'.format(field, index))
             expression_attribute_values.update({
