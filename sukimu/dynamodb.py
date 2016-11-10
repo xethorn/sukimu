@@ -99,7 +99,7 @@ class TableDynamo(schema.Table):
                 expression_attribute_names.update({
                     '#{}'.format(field_index): field
                 })
-                field = '#{}'.format(field)
+                field = '#{}'.format(field_index)
 
             if '.' in field:
                 field_parts = field.split('.')
