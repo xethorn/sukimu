@@ -1,6 +1,8 @@
 """Adaptor for DynamoDB.
 """
 
+import copy
+
 from boto3.dynamodb import conditions
 from oto import response
 from oto import status
@@ -82,7 +84,7 @@ class TableDynamo(schema.Table):
         if not item:
             return item
 
-        item = item.message
+        item = copy.deepcopy(item.message)
         update_expression = []
         expression_attribute_values = {}
         expression_attribute_names = {}
