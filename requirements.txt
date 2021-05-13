@@ -1,6 +1,6 @@
 boto3==1.4.1
 oto==1.0.1
-py==1.10.0
-pytest==6.2.4
-pytest-cov==2.11.1
-python-coveralls==2.9.3
+py
+pytest
+pytest-cov
+python-coveralls
