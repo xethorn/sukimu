@@ -28,7 +28,7 @@ def table_name():
 @pytest.fixture
 def user_schema():
     schema = Schema(
-        TableDynamo(table_name(), dynamodb.connection),
+        TableDynamo(str(uuid.uuid1())[:8], dynamodb.connection),
 
         IndexDynamo(
             Index.PRIMARY, 'id', read_capacity=8, write_capacity=2),
@@ -48,7 +48,7 @@ def user_schema():
 @pytest.fixture
 def thread_schema():
     schema = Schema(
-        TableDynamo(table_name(), dynamodb.connection),
+        TableDynamo(str(uuid.uuid1())[:8], dynamodb.connection),
         IndexDynamo(Index.PRIMARY, 'forum_name', 'thread_title',
                     read_capacity=8, write_capacity=2),
         IndexDynamo(Index.LOCAL, 'forum_name', 'thread_author',
@@ -66,7 +66,7 @@ def thread_schema():
 @pytest.fixture
 def stats_schema():
     schema = Schema(
-        TableDynamo(table_name(), dynamodb.connection),
+        TableDynamo(str(uuid.uuid1())[:8], dynamodb.connection),
         IndexDynamo(Index.PRIMARY, 'user_id', 'day_id',
                     read_capacity=8, write_capacity=2),
         user_id=Field(basetype=int),
@@ -79,7 +79,7 @@ def stats_schema():
 @pytest.fixture
 def stats_reverse_schema():
     schema = Schema(
-        TableDynamo(table_name(), dynamodb.connection),
+        TableDynamo(str(uuid.uuid1())[:8], dynamodb.connection),
         IndexDynamo(Index.PRIMARY, 'user_id', 'day_id',
                     read_capacity=8, write_capacity=2),
         IndexDynamo(Index.GLOBAL, 'day_id', 'user_id',
